@@ -1,0 +1,85 @@
+"""
+Card Inventory Management System - Main Application
+
+FastAPI backend for managing baseball card inventory, checklists,
+purchases, and sales with analytics.
+"""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import get_settings
+from app.routes import (
+    products_router,
+    checklists_router,
+    inventory_router,
+    financial_router,
+    consignments_router,
+    grading_router,
+)
+
+settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler."""
+    # Startup
+    print(f"Starting {settings.app_name}...")
+    yield
+    # Shutdown
+    print(f"Shutting down {settings.app_name}...")
+
+
+app = FastAPI(
+    title=settings.app_name,
+    description="Baseball card inventory management system with checklist uploads, "
+                "inventory tracking, and sales analytics.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.get_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(products_router, prefix="/api", tags=["Brands & Product Lines"])
+app.include_router(checklists_router, prefix="/api", tags=["Checklists & Players"])
+app.include_router(inventory_router, prefix="/api", tags=["Inventory"])
+app.include_router(financial_router, prefix="/api", tags=["Purchases & Sales"])
+app.include_router(consignments_router, prefix="/api", tags=["Consignments"])
+app.include_router(grading_router, prefix="/api", tags=["Grading Submissions"])
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {
+        "app": settings.app_name,
+        "version": "1.0.0",
+        "docs": "/docs",
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.debug,
+    )
