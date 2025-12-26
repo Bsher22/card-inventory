@@ -19,6 +19,7 @@ from app.routes import (
     consignments_router,
     grading_router,
 )
+from app.routes.card_types import router as card_types_router
 
 settings = get_settings()
 
@@ -57,6 +58,7 @@ app.include_router(inventory_router, prefix="/api", tags=["Inventory"])
 app.include_router(financial_router, prefix="/api", tags=["Purchases & Sales"])
 app.include_router(consignments_router, prefix="/api", tags=["Consignments"])
 app.include_router(grading_router, prefix="/api", tags=["Grading Submissions"])
+app.include_router(card_types_router)  # Card Types, Parallels & PDF Parsing
 
 
 @app.get("/")
