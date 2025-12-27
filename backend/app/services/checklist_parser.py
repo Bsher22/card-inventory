@@ -222,7 +222,12 @@ class ChecklistParser:
         if filename.endswith('.csv'):
             df = pd.read_csv(BytesIO(file_content))
         elif filename.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(BytesIO(file_content))
+            # Try to use "Master" sheet if it exists, otherwise first sheet
+            xl = pd.ExcelFile(BytesIO(file_content))
+            if 'Master' in xl.sheet_names:
+                df = pd.read_excel(xl, sheet_name='Master')
+            else:
+                df = pd.read_excel(xl, sheet_name=0)
         else:
             raise ValueError(f"Unsupported file type: {filename}")
         
@@ -256,7 +261,12 @@ class ChecklistParser:
         if filename.endswith('.csv'):
             df = pd.read_csv(BytesIO(file_content))
         elif filename.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(BytesIO(file_content))
+            # Try to use "Master" sheet if it exists, otherwise first sheet
+            xl = pd.ExcelFile(BytesIO(file_content))
+            if 'Master' in xl.sheet_names:
+                df = pd.read_excel(xl, sheet_name='Master')
+            else:
+                df = pd.read_excel(xl, sheet_name=0)
         else:
             raise ValueError(f"Unsupported file type: {filename}")
         
