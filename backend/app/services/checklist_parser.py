@@ -235,6 +235,7 @@ class ChecklistParser:
         sample_rows = sample_df.to_dict('records')
         
         return ChecklistUploadPreview(
+            filename=filename,
             total_rows=len(df),
             sample_rows=sample_rows,
             detected_columns=mapped_columns,
