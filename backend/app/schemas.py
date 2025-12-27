@@ -267,18 +267,26 @@ class ChecklistUploadPreview(BaseModel):
     detected_year: Optional[int] = None
     total_rows: int
     sample_rows: List[Dict]
-    column_mapping: Dict[str, str]
+    # Support both naming conventions
+    column_mapping: Dict[str, str] = {}
+    detected_columns: Dict[str, str] = {}
     columns_found: List[str] = []
+    unmapped_columns: List[str] = []
 
 
 class ChecklistUploadResult(BaseModel):
     """Result of checklist upload"""
-    success: bool
     product_line_id: Optional[UUID] = None
-    total_rows: int
-    imported: int
-    skipped: int
+    total_rows: int = 0
+    cards_created: int = 0
+    cards_updated: int = 0
+    players_created: int = 0
+    players_matched: int = 0
     errors: List[str] = []
+    # Additional fields for compatibility
+    success: bool = True
+    imported: int = 0
+    skipped: int = 0
 
 
 class ChecklistImportPreview(BaseModel):
@@ -351,6 +359,10 @@ class InventoryWithDetails(InventoryResponse):
     checklist: ChecklistResponse
 
 
+# Alias for backward compatibility
+InventoryWithCard = InventoryWithDetails
+
+
 class InventoryAdjust(BaseModel):
     """Adjustment to inventory quantity"""
     quantity_change: int  # Can be positive or negative
@@ -384,6 +396,18 @@ class InventorySummary(BaseModel):
     signed_count: int
     slabbed_count: int
     raw_count: int
+
+
+class InventoryAnalytics(BaseModel):
+    """Comprehensive inventory analytics"""
+    total_unique_cards: int
+    total_quantity: int
+    total_cost_basis: Decimal
+    total_revenue: Decimal
+    total_profit: Decimal
+    cards_by_brand: Dict[str, int]
+    cards_by_year: Dict[int, int]
+    top_players: List["PlayerInventorySummary"]
 
 
 # ============================================
