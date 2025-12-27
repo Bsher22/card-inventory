@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
 from app.models import (
-    Inventory, Checklist, Player, ProductLine, Brand, 
+    Inventory, Checklist, Player, ProductLine, Brand,
     PurchaseItem, SaleItem, CardType
 )
 from app.schemas import (
@@ -27,7 +27,7 @@ from app.schemas import (
 class InventoryService:
     def __init__(self, db: AsyncSession):
         self.db = db
-    
+
     async def get_all(
         self,
         skip: int = 0,
@@ -52,19 +52,19 @@ class InventoryService:
             )
             .join(Checklist)
         )
-        
+
         if in_stock_only:
             query = query.where(Inventory.quantity > 0)
-        
+
         if product_line_id:
             query = query.where(Checklist.product_line_id == product_line_id)
-        
+
         if player_id:
             query = query.where(Checklist.player_id == player_id)
-        
+
         if brand_id:
             query = query.join(ProductLine).where(ProductLine.brand_id == brand_id)
-        
+
         if search:
             search_term = f"%{search}%"
             query = query.outerjoin(Player).where(
@@ -75,11 +75,11 @@ class InventoryService:
                     Checklist.team.ilike(search_term),
                 )
             )
-        
+
         query = query.offset(skip).limit(limit)
         result = await self.db.execute(query)
         return result.scalars().all()
-    
+
     async def get_by_id(self, inventory_id: UUID) -> Optional[Inventory]:
         """Get a single inventory item by ID."""
         query = (
@@ -94,21 +94,21 @@ class InventoryService:
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
-    
+
     async def get_by_checklist(
-        self, 
+        self,
         checklist_id: UUID,
         condition: Optional[str] = None,
     ) -> list[Inventory]:
         """Get inventory items for a specific checklist."""
         query = select(Inventory).where(Inventory.checklist_id == checklist_id)
-        
+
         if condition:
             query = query.where(Inventory.condition == condition)
-        
+
         result = await self.db.execute(query)
         return result.scalars().all()
-    
+
     async def create(self, data: InventoryCreate) -> Inventory:
         """Create a new inventory item."""
         # Check if inventory already exists for this checklist/condition combo
@@ -122,49 +122,49 @@ class InventoryService:
                 )
             )
         )
-        
+
         if existing.scalar_one_or_none():
             raise ValueError("Inventory item already exists for this card/condition combination")
-        
+
         inventory = Inventory(**data.model_dump())
         self.db.add(inventory)
         await self.db.flush()
         await self.db.refresh(inventory)
         return inventory
-    
+
     async def update(self, inventory_id: UUID, data: InventoryUpdate) -> Optional[Inventory]:
         """Update an inventory item."""
         inventory = await self.get_by_id(inventory_id)
         if not inventory:
             return None
-        
+
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(inventory, field, value)
-        
+
         await self.db.flush()
         await self.db.refresh(inventory)
         return inventory
-    
+
     async def adjust_quantity(
-        self, 
-        inventory_id: UUID, 
+        self,
+        inventory_id: UUID,
         adjustment: int
     ) -> Optional[Inventory]:
         """Adjust inventory quantity by a positive or negative amount."""
         inventory = await self.get_by_id(inventory_id)
         if not inventory:
             return None
-        
+
         new_quantity = inventory.quantity + adjustment
         if new_quantity < 0:
             raise ValueError(f"Cannot reduce quantity below 0 (current: {inventory.quantity}, adjustment: {adjustment})")
-        
+
         inventory.quantity = new_quantity
         await self.db.flush()
         await self.db.refresh(inventory)
         return inventory
-    
+
     async def add_to_inventory(
         self,
         checklist_id: UUID,
@@ -188,7 +188,7 @@ class InventoryService:
         )
         result = await self.db.execute(query)
         existing = result.scalar_one_or_none()
-        
+
         if existing:
             existing.quantity += quantity
             await self.db.flush()
@@ -204,7 +204,7 @@ class InventoryService:
             self.db.add(new_inventory)
             await self.db.flush()
             return new_inventory
-    
+
     async def remove_from_inventory(
         self,
         checklist_id: UUID,
@@ -224,27 +224,27 @@ class InventoryService:
         )
         result = await self.db.execute(query)
         inventory = result.scalar_one_or_none()
-        
+
         if not inventory:
             raise ValueError("Inventory record not found")
-        
+
         if inventory.quantity < quantity:
             raise ValueError(f"Insufficient quantity (have: {inventory.quantity}, requested: {quantity})")
-        
+
         inventory.quantity -= quantity
         await self.db.flush()
         return inventory
-    
+
     async def delete(self, inventory_id: UUID) -> bool:
         """Delete an inventory item."""
         inventory = await self.get_by_id(inventory_id)
         if not inventory:
             return False
-        
+
         await self.db.delete(inventory)
         await self.db.flush()
         return True
-    
+
     async def get_player_summary(
         self,
         limit: int = 20,
@@ -287,10 +287,10 @@ class InventoryService:
             .order_by(func.sum(Inventory.quantity).desc())
             .limit(limit)
         )
-        
+
         result = await self.db.execute(query)
         rows = result.all()
-        
+
         summaries = []
         for row in rows:
             summaries.append(PlayerInventorySummary(
@@ -304,9 +304,9 @@ class InventoryService:
                 rookie_count=row.rookie_count or 0,
                 numbered_count=row.numbered_count or 0,
             ))
-        
+
         return summaries
-    
+
     async def get_analytics(self) -> InventoryAnalytics:
         """Get comprehensive inventory analytics."""
         # Basic counts
@@ -314,24 +314,24 @@ class InventoryService:
             func.count(func.distinct(Checklist.id)).label("unique_cards"),
             func.sum(Inventory.quantity).label("total_quantity"),
         ).select_from(Inventory).join(Checklist).where(Inventory.quantity > 0)
-        
+
         count_result = await self.db.execute(count_query)
         counts = count_result.one()
-        
-        # Cost basis
+
+        # Cost basis - use unit_price (matches model)
         cost_query = select(
-            func.sum(PurchaseItem.quantity * PurchaseItem.unit_cost)
+            func.sum(PurchaseItem.quantity * PurchaseItem.unit_price)
         ).select_from(PurchaseItem)
         cost_result = await self.db.execute(cost_query)
         total_cost = cost_result.scalar() or Decimal("0")
-        
+
         # Revenue
         revenue_query = select(
             func.sum(SaleItem.quantity * SaleItem.sale_price)
         ).select_from(SaleItem)
         revenue_result = await self.db.execute(revenue_query)
         total_revenue = revenue_result.scalar() or Decimal("0")
-        
+
         # Cards by brand
         brand_query = (
             select(Brand.name, func.sum(Inventory.quantity))
@@ -344,7 +344,7 @@ class InventoryService:
         )
         brand_result = await self.db.execute(brand_query)
         cards_by_brand = {row[0]: row[1] for row in brand_result.all()}
-        
+
         # Cards by year
         year_query = (
             select(ProductLine.year, func.sum(Inventory.quantity))
@@ -357,10 +357,10 @@ class InventoryService:
         )
         year_result = await self.db.execute(year_query)
         cards_by_year = {row[0]: row[1] for row in year_result.all()}
-        
+
         # Top players
         top_players = await self.get_player_summary(limit=10)
-        
+
         return InventoryAnalytics(
             total_unique_cards=counts.unique_cards or 0,
             total_quantity=counts.total_quantity or 0,
