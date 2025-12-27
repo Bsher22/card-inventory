@@ -42,8 +42,9 @@ COLUMN_MAPPINGS = {
 }
 
 
-def normalize_column_name(col: str) -> str:
+def normalize_column_name(col) -> str:
     """Normalize column name for matching."""
+    col = str(col)  # Convert to string in case of int column names
     return col.lower().strip().replace("_", " ").replace("-", " ")
 
 
