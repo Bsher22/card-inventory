@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
@@ -260,19 +260,19 @@ class InventoryService:
                 func.count(func.distinct(Checklist.id)).label("unique_cards"),
                 func.sum(Inventory.quantity).label("total_cards"),
                 func.sum(
-                    func.case(
+                    case(
                         (Checklist.is_autograph == True, Inventory.quantity),
                         else_=0
                     )
                 ).label("auto_count"),
                 func.sum(
-                    func.case(
+                    case(
                         (Checklist.is_rookie_card == True, Inventory.quantity),
                         else_=0
                     )
                 ).label("rookie_count"),
                 func.sum(
-                    func.case(
+                    case(
                         (Checklist.serial_numbered.isnot(None), Inventory.quantity),
                         else_=0
                     )
