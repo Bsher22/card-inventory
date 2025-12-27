@@ -764,6 +764,25 @@ class DashboardStats(BaseModel):
     graded_count: int
 
 
+class SalesAnalytics(BaseModel):
+    """Sales analytics summary"""
+    total_sales: int
+    total_revenue: Decimal
+    total_profit: Decimal
+    avg_sale_price: Decimal
+    sales_by_platform: Dict[str, Decimal]
+    sales_by_month: Dict[str, Decimal]
+
+
+class PurchaseAnalytics(BaseModel):
+    """Purchase analytics summary"""
+    total_purchases: int
+    total_spent: Decimal
+    avg_purchase_price: Decimal
+    purchases_by_vendor: Dict[str, Decimal]
+    purchases_by_month: Dict[str, Decimal]
+
+
 class PlayerSummary(BaseModel):
     """Player-level analytics"""
     player_id: UUID
