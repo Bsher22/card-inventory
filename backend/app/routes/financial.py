@@ -10,7 +10,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, extract, literal_column
+from sqlalchemy import select, func, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -264,17 +264,17 @@ async def get_sales_analytics(
         for row in platform_result.all()
     }
 
-    # Sales by month - use literal_column to reference the alias
-    month_expr = func.to_char(Sale.sale_date, 'YYYY-MM').label("month")
+    # Sales by month - use the same expression in GROUP BY and ORDER BY
+    month_expr = func.to_char(Sale.sale_date, 'YYYY-MM')
     month_query = (
         select(
-            month_expr,
-            func.sum(SaleItem.quantity * SaleItem.sale_price)
+            month_expr.label("month"),
+            func.sum(SaleItem.quantity * SaleItem.sale_price).label("total")
         )
         .select_from(SaleItem)
         .join(Sale)
-        .group_by(literal_column("month"))
-        .order_by(literal_column("month"))
+        .group_by(month_expr)
+        .order_by(month_expr)
     )
     if base_filter:
         month_query = month_query.where(*base_filter)
