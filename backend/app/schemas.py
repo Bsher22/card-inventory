@@ -254,6 +254,33 @@ class ChecklistFilters(BaseModel):
     offset: int = Field(default=0, ge=0)
 
 
+class ChecklistWithDetails(ChecklistResponse):
+    """Checklist with full nested details"""
+    player: Optional[PlayerResponse] = None
+    product_line: Optional[ProductLineResponse] = None
+
+
+class ChecklistUploadPreview(BaseModel):
+    """Preview of checklist file before import"""
+    filename: str
+    detected_product: Optional[str] = None
+    detected_year: Optional[int] = None
+    total_rows: int
+    sample_rows: List[Dict]
+    column_mapping: Dict[str, str]
+    columns_found: List[str] = []
+
+
+class ChecklistUploadResult(BaseModel):
+    """Result of checklist upload"""
+    success: bool
+    product_line_id: Optional[UUID] = None
+    total_rows: int
+    imported: int
+    skipped: int
+    errors: List[str] = []
+
+
 class ChecklistImportPreview(BaseModel):
     """Preview of checklist file before import"""
     filename: str
