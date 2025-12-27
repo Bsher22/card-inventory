@@ -351,6 +351,41 @@ class InventoryWithDetails(InventoryResponse):
     checklist: ChecklistResponse
 
 
+class InventoryAdjust(BaseModel):
+    """Adjustment to inventory quantity"""
+    quantity_change: int  # Can be positive or negative
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class InventoryFilter(BaseModel):
+    """Filters for inventory queries"""
+    checklist_id: Optional[UUID] = None
+    product_line_id: Optional[UUID] = None
+    player_id: Optional[UUID] = None
+    is_signed: Optional[bool] = None
+    is_slabbed: Optional[bool] = None
+    player_name: Optional[str] = None
+    team: Optional[str] = None
+    min_quantity: Optional[int] = None
+    search: Optional[str] = None
+
+
+class InventoryBulkCreate(BaseModel):
+    """Bulk create inventory items"""
+    items: List["InventoryCreate"]
+
+
+class InventorySummary(BaseModel):
+    """Summary statistics for inventory"""
+    total_unique_cards: int
+    total_quantity: int
+    total_cost_basis: Decimal
+    signed_count: int
+    slabbed_count: int
+    raw_count: int
+
+
 # ============================================
 # BECKETT IMPORT SCHEMAS
 # ============================================
