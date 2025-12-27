@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Check, X, Clock,
   AlertCircle
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { Consignment, Consigner, PendingConsignmentsValue } from '../types';
 
 function formatCurrency(value: number): string {
@@ -38,17 +38,17 @@ export default function Consignments() {
 
   const { data: consigners } = useQuery({
     queryKey: ['consigners'],
-    queryFn: () => api.getConsigners(),
+    queryFn: () => api.consignments.getConsigners(),
   });
 
   const { data: pendingValue } = useQuery({
     queryKey: ['pending-consignments-value'],
-    queryFn: () => api.getPendingConsignmentsValue(),
+    queryFn: () => api.consignments.getPendingConsignmentsValue(),
   });
 
   const { data: consignments, isLoading } = useQuery({
     queryKey: ['consignments', filterConsigner, filterStatus],
-    queryFn: () => api.getConsignments({
+    queryFn: () => api.consignments.getConsignments({
       consigner_id: filterConsigner || undefined,
       status: filterStatus || undefined,
     }),
@@ -186,7 +186,7 @@ function ConsignmentCard({
     .reduce((sum, i) => sum + i.quantity, 0);
 
   const markPaidMutation = useMutation({
-    mutationFn: () => api.markConsignmentFeePaid(consignment.id),
+    mutationFn: () => api.consignments.markConsignmentFeePaid(consignment.id),
     onSuccess: onUpdate,
   });
 

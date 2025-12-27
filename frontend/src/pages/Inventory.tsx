@@ -4,7 +4,7 @@ import {
   Search, ChevronDown, Plus, Minus, Package, 
   Pen, Award, Filter 
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { InventoryWithCard } from '../types';
 
 function formatCurrency(value: number): string {
@@ -24,12 +24,12 @@ export default function Inventory() {
 
   const { data: brands } = useQuery({
     queryKey: ['brands'],
-    queryFn: () => api.getBrands(),
+    queryFn: () => api.products.getBrands(),
   });
 
   const { data: inventory, isLoading } = useQuery({
     queryKey: ['inventory', filterBrand, search, inStockOnly],
-    queryFn: () => api.getInventory({
+    queryFn: () => api.inventory.getInventory({
       brand_id: filterBrand || undefined,
       search: search || undefined,
       in_stock_only: inStockOnly,
@@ -39,7 +39,7 @@ export default function Inventory() {
 
   const adjustMutation = useMutation({
     mutationFn: ({ id, adjustment }: { id: string; adjustment: number }) =>
-      api.adjustInventory(id, adjustment),
+      api.inventory.adjustInventory(id, adjustment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },

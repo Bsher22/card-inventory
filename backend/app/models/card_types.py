@@ -1,30 +1,23 @@
 """
 Card Types and Parallels Models
-Additional SQLAlchemy models for card base types, parallel categories, and parallels
+CardBaseType, ParallelCategory, Parallel, CardPrefixMapping
 """
 
-import uuid
 from datetime import datetime
-from decimal import Decimal
 from typing import Optional, List, TYPE_CHECKING
+import uuid
 
-from sqlalchemy import (
-    String, Integer, Boolean, Text, DateTime, Numeric,
-    ForeignKey, UniqueConstraint, CheckConstraint, Index
-)
+from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from .database import Base
+from .base import Base
 
 if TYPE_CHECKING:
-    from .models import Checklist, Inventory
+    from .checklists import Checklist
+    from .inventory import Inventory
 
-
-# ============================================
-# CARD BASE TYPES
-# ============================================
 
 class CardBaseType(Base):
     """
@@ -32,7 +25,7 @@ class CardBaseType(Base):
     These represent the fundamental card stock/format
     """
     __tablename__ = "card_base_types"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -42,7 +35,7 @@ class CardBaseType(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    
+
     # Relationships
     checklists: Mapped[List["Checklist"]] = relationship(
         back_populates="base_type",
@@ -52,21 +45,15 @@ class CardBaseType(Base):
         back_populates="base_type",
         foreign_keys="Inventory.base_type_id"
     )
-    
+
     def __repr__(self) -> str:
         return f"<CardBaseType(name='{self.name}')>"
 
 
-# ============================================
-# PARALLEL CATEGORIES
-# ============================================
-
 class ParallelCategory(Base):
-    """
-    Categories to group parallels: Core, Patterned, Shimmer/Wave, etc.
-    """
+    """Categories to group parallels: Core, Patterned, Shimmer/Wave, etc."""
     __tablename__ = "parallel_categories"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -75,29 +62,23 @@ class ParallelCategory(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    
+
     # Relationships
     parallels: Mapped[List["Parallel"]] = relationship(back_populates="category")
-    
+
     def __repr__(self) -> str:
         return f"<ParallelCategory(name='{self.name}')>"
 
 
-# ============================================
-# PARALLELS
-# ============================================
-
 class Parallel(Base):
-    """
-    All parallel types: Refractor, Purple /250, Gold /50, SuperFractor 1/1, etc.
-    """
+    """All parallel types: Refractor, Purple /250, Gold /50, SuperFractor 1/1, etc."""
     __tablename__ = "parallels"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     category_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True), 
+        UUID(as_uuid=True),
         ForeignKey("parallel_categories.id", ondelete="SET NULL")
     )
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
@@ -112,14 +93,14 @@ class Parallel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    
+
     # Relationships
     category: Mapped[Optional["ParallelCategory"]] = relationship(back_populates="parallels")
     inventory_items: Mapped[List["Inventory"]] = relationship(
         back_populates="parallel",
         foreign_keys="Inventory.parallel_id"
     )
-    
+
     @property
     def display_name(self) -> str:
         """Returns display-friendly name with print run"""
@@ -128,14 +109,10 @@ class Parallel(Base):
         elif self.print_run:
             return f"{self.short_name} /{self.print_run}"
         return self.short_name
-    
+
     def __repr__(self) -> str:
         return f"<Parallel(name='{self.name}', print_run={self.print_run})>"
 
-
-# ============================================
-# CARD PREFIX MAPPINGS (for parsing)
-# ============================================
 
 class CardPrefixMapping(Base):
     """
@@ -146,7 +123,7 @@ class CardPrefixMapping(Base):
     __table_args__ = (
         UniqueConstraint('prefix', 'product_type', name='uq_prefix_product'),
     )
-    
+
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
@@ -157,15 +134,12 @@ class CardPrefixMapping(Base):
     is_prospect: Mapped[bool] = mapped_column(Boolean, default=True)
     base_type_name: Mapped[Optional[str]] = mapped_column(String(50))
     notes: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     def __repr__(self) -> str:
         return f"<CardPrefixMapping(prefix='{self.prefix}', product='{self.product_type}')>"
 
 
-# ============================================
-# INDEX DEFINITIONS
-# ============================================
-
+# Index definitions
 Index('idx_parallels_category', Parallel.category_id)
 Index('idx_parallels_print_run', Parallel.print_run)
 Index('idx_parallels_sort', Parallel.sort_order)

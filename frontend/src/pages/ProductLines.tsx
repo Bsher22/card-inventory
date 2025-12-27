@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Package, Trash2, ChevronDown } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { Brand, ProductLineSummary, ProductLineCreate } from '../types';
 
 function formatNumber(value: number): string {
@@ -16,19 +16,19 @@ export default function ProductLines() {
 
   const { data: brands } = useQuery({
     queryKey: ['brands'],
-    queryFn: () => api.getBrands(),
+    queryFn: () => api.products.getBrands(),
   });
 
   const { data: productLines, isLoading } = useQuery({
     queryKey: ['product-lines', filterBrand, filterYear],
-    queryFn: () => api.getProductLines({
+    queryFn: () => api.products.getProductLines({
       brand_id: filterBrand || undefined,
       year: filterYear ? parseInt(filterYear) : undefined,
     }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.deleteProductLine(id),
+    mutationFn: (id: string) => api.products.deleteProductLine(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-lines'] });
     },
@@ -189,7 +189,7 @@ function CreateProductLineModal({
   const [error, setError] = useState('');
 
   const mutation = useMutation({
-    mutationFn: (data: ProductLineCreate) => api.createProductLine(data),
+    mutationFn: (data: ProductLineCreate) => api.products.createProductLine(data),
     onSuccess: () => onCreated(),
     onError: (err: Error) => setError(err.message),
   });

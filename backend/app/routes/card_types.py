@@ -15,8 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..database import get_db
-from ..models_card_types import CardBaseType, ParallelCategory, Parallel, CardPrefixMapping
-from ..schemas_card_types import (
+from ..models import (
+    CardBaseType, ParallelCategory, Parallel, CardPrefixMapping,
+    Checklist, ProductLine,
+)
+from ..schemas import (
     CardBaseTypeCreate, CardBaseTypeUpdate, CardBaseTypeResponse, CardBaseTypeWithCounts,
     ParallelCategoryCreate, ParallelCategoryUpdate, ParallelCategoryResponse, ParallelCategoryWithParallels,
     ParallelCreate, ParallelUpdate, ParallelResponse, ParallelWithCategory, ParallelWithInventoryCount,
@@ -262,10 +265,7 @@ async def create_parallel(
     data: ParallelCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """Create a new parallel type"""
-    if data.print_run == 1:
-        data.is_one_of_one = True
-    
+    """Create a new parallel"""
     parallel = Parallel(**data.model_dump())
     db.add(parallel)
     await db.commit()
@@ -290,17 +290,17 @@ async def update_parallel(
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(parallel, key, value)
     
-    if parallel.print_run == 1:
-        parallel.is_one_of_one = True
-    
     await db.commit()
     await db.refresh(parallel)
     return parallel
 
 
 @router.delete("/parallels/{parallel_id}", status_code=204)
-async def delete_parallel(parallel_id: UUID, db: AsyncSession = Depends(get_db)):
-    """Delete a parallel (only if not in use)"""
+async def delete_parallel(
+    parallel_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a parallel"""
     result = await db.execute(
         select(Parallel).where(Parallel.id == parallel_id)
     )
@@ -498,8 +498,6 @@ async def import_parsed_checklist(
     
     Expects the cards array from parse-pdf endpoint
     """
-    from ..models import Checklist, ProductLine
-    
     pl_result = await db.execute(
         select(ProductLine).where(ProductLine.id == product_line_id)
     )

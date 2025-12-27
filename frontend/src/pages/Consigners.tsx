@@ -4,7 +4,7 @@ import {
   Plus, User, MapPin, DollarSign, Phone, Mail, 
   MoreVertical, TrendingUp, Package, Check, X
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { Consigner, ConsignerCreate, ConsignerStats } from '../types';
 
 function formatCurrency(value: number): string {
@@ -22,7 +22,7 @@ export default function Consigners() {
 
   const { data: consigners, isLoading } = useQuery({
     queryKey: ['consigners', showInactive],
-    queryFn: () => api.getConsigners({ active_only: !showInactive }),
+    queryFn: () => api.consignments.getConsigners({ active_only: !showInactive }),
   });
 
   return (
@@ -114,13 +114,13 @@ function ConsignerCard({
 }) {
   const { data: stats } = useQuery({
     queryKey: ['consigner-stats', consigner.id],
-    queryFn: () => api.getConsignerStats(consigner.id),
+    queryFn: () => api.consignments.getConsignerStats(consigner.id),
     enabled: isExpanded,
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<ConsignerCreate & { is_active: boolean }>) =>
-      api.updateConsigner(consigner.id, data),
+      api.consignments.updateConsigner(consigner.id, data),
     onSuccess: onUpdate,
   });
 
@@ -258,7 +258,7 @@ function CreateConsignerModal({
   const [error, setError] = useState('');
 
   const mutation = useMutation({
-    mutationFn: (data: ConsignerCreate) => api.createConsigner(data),
+    mutationFn: (data: ConsignerCreate) => api.consignments.createConsigner(data),
     onSuccess: onCreated,
     onError: (err: Error) => setError(err.message),
   });

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Upload, FileSpreadsheet, Check, AlertCircle, ChevronDown, ArrowRight } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { ChecklistUploadPreview, ChecklistUploadResult } from '../types';
 
 export default function ChecklistUpload() {
@@ -15,11 +15,11 @@ export default function ChecklistUpload() {
 
   const { data: productLines } = useQuery({
     queryKey: ['product-lines'],
-    queryFn: () => api.getProductLines(),
+    queryFn: () => api.products.getProductLines(),
   });
 
   const previewMutation = useMutation({
-    mutationFn: (file: File) => api.previewChecklistUpload(file),
+    mutationFn: (file: File) => api.checklists.previewChecklistUpload(file),
     onSuccess: (data) => {
       setPreview(data);
       setStep('preview');
@@ -30,7 +30,7 @@ export default function ChecklistUpload() {
 
   const uploadMutation = useMutation({
     mutationFn: ({ file, productLineId }: { file: File; productLineId: string }) =>
-      api.uploadChecklist(file, productLineId),
+      api.checklists.uploadChecklist(file, productLineId),
     onSuccess: (data) => {
       setResult(data);
       setStep('result');

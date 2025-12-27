@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Filter, ChevronDown, Star, Pen, Award } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { ProductLineSummary } from '../types';
 
 export default function Checklists() {
@@ -12,12 +12,12 @@ export default function Checklists() {
 
   const { data: productLines } = useQuery({
     queryKey: ['product-lines'],
-    queryFn: () => api.getProductLines(),
+    queryFn: () => api.products.getProductLines(),
   });
 
   const { data: checklists, isLoading } = useQuery({
     queryKey: ['checklists', filterProductLine, filterRookie, filterAuto, search],
-    queryFn: () => api.getChecklists({
+    queryFn: () => api.checklists.getChecklists({
       product_line_id: filterProductLine || undefined,
       is_rookie: filterRookie,
       is_auto: filterAuto,

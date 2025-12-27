@@ -7,7 +7,7 @@ import {
   Users,
   BarChart3 
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { InventoryAnalytics, SalesAnalytics } from '../types';
 
 function StatCard({ 
@@ -70,12 +70,12 @@ function formatNumber(value: number): string {
 export default function Dashboard() {
   const { data: inventoryAnalytics, isLoading: loadingInventory } = useQuery<InventoryAnalytics>({
     queryKey: ['inventory-analytics'],
-    queryFn: () => api.getInventoryAnalytics(),
+    queryFn: () => api.inventory.getInventoryAnalytics(),
   });
 
   const { data: salesAnalytics, isLoading: loadingSales } = useQuery<SalesAnalytics>({
     queryKey: ['sales-analytics'],
-    queryFn: () => api.getSalesAnalytics(),
+    queryFn: () => api.financial.getSalesAnalytics(),
   });
 
   const isLoading = loadingInventory || loadingSales;

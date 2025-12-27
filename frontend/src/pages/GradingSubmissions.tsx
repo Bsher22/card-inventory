@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Check, Clock,
   AlertCircle, Star, BarChart3
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { GradingSubmission, GradingStats, PendingByCompany } from '../types';
 
 function formatCurrency(value: number): string {
@@ -41,22 +41,22 @@ export default function GradingSubmissions() {
 
   const { data: companies } = useQuery({
     queryKey: ['grading-companies'],
-    queryFn: () => api.getGradingCompanies(),
+    queryFn: () => api.grading.getGradingCompanies(),
   });
 
   const { data: stats } = useQuery({
     queryKey: ['grading-stats'],
-    queryFn: () => api.getGradingStats(),
+    queryFn: () => api.grading.getGradingStats(),
   });
 
   const { data: pendingByCompany } = useQuery({
     queryKey: ['pending-by-company'],
-    queryFn: () => api.getPendingByCompany(),
+    queryFn: () => api.grading.getPendingByCompany(),
   });
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['grading-submissions', filterCompany, filterStatus],
-    queryFn: () => api.getGradingSubmissions({
+    queryFn: () => api.grading.getGradingSubmissions({
       grading_company_id: filterCompany || undefined,
       status: filterStatus || undefined,
     }),
@@ -211,10 +211,6 @@ export default function GradingSubmissions() {
               submission={submission}
               isExpanded={expandedId === submission.id}
               onToggle={() => setExpandedId(expandedId === submission.id ? null : submission.id)}
-              onUpdate={() => {
-                queryClient.invalidateQueries({ queryKey: ['grading-submissions'] });
-                queryClient.invalidateQueries({ queryKey: ['grading-stats'] });
-              }}
             />
           ))}
 
@@ -233,16 +229,14 @@ function SubmissionCard({
   submission,
   isExpanded,
   onToggle,
-  onUpdate,
 }: {
   submission: GradingSubmission;
   isExpanded: boolean;
   onToggle: () => void;
-  onUpdate: () => void;
 }) {
   const status = STATUS_STYLES[submission.status] || STATUS_STYLES.preparing;
-  const companyName = submission.grading_company?.name || 'Unknown';
-
+  const totalCards = submission.items.length;
+  const gradedCards = submission.items.filter(i => i.grade_value !== null).length;
   const totalFees = submission.grading_fee + submission.shipping_to_cost + 
     submission.shipping_return_cost + submission.insurance_cost;
 
@@ -256,38 +250,38 @@ function SubmissionCard({
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+            <div className="p-2 bg-purple-100 rounded-lg">
+              {isExpanded ? <ChevronDown className="text-purple-600" size={20} /> : <ChevronRight className="text-purple-600" size={20} />}
             </div>
             <div>
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-gray-900">
-                  {companyName}
-                  {submission.service_level && ` - ${submission.service_level.name}`}
+                  {submission.grading_company?.name || 'Unknown Company'}
                 </h3>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
                   {status.label}
                 </span>
+                {submission.submission_number && (
+                  <span className="text-sm text-gray-500">#{submission.submission_number}</span>
+                )}
               </div>
               <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <Calendar size={14} />
                   Submitted {formatDate(submission.date_submitted)}
                 </span>
-                {submission.submission_number && (
-                  <span>#{submission.submission_number}</span>
-                )}
-                {submission.reference_number && (
-                  <span>Ref: {submission.reference_number}</span>
+                <span>{totalCards} cards</span>
+                {submission.service_level?.name && (
+                  <span className="text-purple-600">{submission.service_level.name}</span>
                 )}
               </div>
             </div>
           </div>
 
           <div className="text-right">
-            <p className="font-bold text-gray-900">{submission.total_cards} cards</p>
-            {submission.cards_graded > 0 && (
-              <p className="text-sm text-green-600">{submission.cards_graded} graded</p>
+            <p className="text-xl font-bold text-gray-900">{formatCurrency(totalFees)}</p>
+            {gradedCards > 0 && (
+              <p className="text-sm text-green-600">{gradedCards}/{totalCards} graded</p>
             )}
           </div>
         </div>
@@ -298,6 +292,12 @@ function SubmissionCard({
             label="Submitted" 
             date={submission.date_submitted}
             isComplete={true}
+          />
+          <div className="flex-1 h-0.5 bg-gray-200" />
+          <TimelineStep 
+            label="Shipped" 
+            date={submission.date_shipped}
+            isComplete={!!submission.date_shipped}
           />
           <div className="flex-1 h-0.5 bg-gray-200" />
           <TimelineStep 

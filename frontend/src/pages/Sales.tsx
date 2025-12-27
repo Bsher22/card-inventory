@@ -4,7 +4,7 @@ import {
   Plus, DollarSign, Calendar, TrendingUp,
   ChevronDown, ChevronRight, Package, Store
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { Sale, SalesAnalytics } from '../types';
 
 function formatCurrency(value: number): string {
@@ -29,7 +29,7 @@ export default function Sales() {
 
   const { data: analytics } = useQuery({
     queryKey: ['sales-analytics', dateRange],
-    queryFn: () => api.getSalesAnalytics({
+    queryFn: () => api.financial.getSalesAnalytics({
       start_date: dateRange.start,
       end_date: dateRange.end,
     }),
@@ -37,7 +37,7 @@ export default function Sales() {
 
   const { data: sales, isLoading } = useQuery({
     queryKey: ['sales', filterPlatform, dateRange],
-    queryFn: () => api.getSales({
+    queryFn: () => api.financial.getSales({
       platform: filterPlatform || undefined,
       start_date: dateRange.start,
       end_date: dateRange.end,

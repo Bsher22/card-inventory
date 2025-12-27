@@ -4,7 +4,7 @@ import {
   Plus, ShoppingCart, Calendar, Store, 
   ChevronDown, ChevronRight, Package
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api } from '../api';
 import type { Purchase } from '../types';
 
 function formatCurrency(value: number): string {
@@ -28,7 +28,7 @@ export default function Purchases() {
 
   const { data: purchases, isLoading } = useQuery({
     queryKey: ['purchases', dateRange],
-    queryFn: () => api.getPurchases({
+    queryFn: () => api.financial.getPurchases({
       start_date: dateRange.start,
       end_date: dateRange.end,
     }),
