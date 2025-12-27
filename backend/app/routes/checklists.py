@@ -217,7 +217,24 @@ async def preview_checklist_upload(
     
     try:
         preview = await parser.preview_upload(content, file.filename)
-        return preview
+        
+        # Ensure filename is included in response
+        if isinstance(preview, dict):
+            preview['filename'] = file.filename
+            return ChecklistUploadPreview(**preview)
+        else:
+            # If preview is already a Pydantic model or object, build response manually
+            return ChecklistUploadPreview(
+                filename=file.filename,
+                total_rows=getattr(preview, 'total_rows', 0),
+                sample_rows=getattr(preview, 'sample_rows', []),
+                detected_columns=getattr(preview, 'detected_columns', {}),
+                unmapped_columns=getattr(preview, 'unmapped_columns', []),
+                column_mapping=getattr(preview, 'column_mapping', {}),
+                columns_found=getattr(preview, 'columns_found', []),
+                detected_product=getattr(preview, 'detected_product', None),
+                detected_year=getattr(preview, 'detected_year', None),
+            )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error parsing file: {str(e)}")
 
@@ -301,7 +318,3 @@ async def list_players(
     
     result = await db.execute(query)
     return result.scalars().all()
-
-
-# Import PlayerResponse for the route
-from app.schemas import PlayerResponse
