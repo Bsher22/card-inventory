@@ -39,6 +39,9 @@ class BrandResponse(BrandBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+class BrandWithProducts(BrandResponse):
+    """Brand with nested product lines"""
+    product_lines: list["ProductLineResponse"] = []
 
 # ============================================
 # PRODUCT LINE SCHEMAS
@@ -71,6 +74,23 @@ class ProductLineResponse(ProductLineBase):
     updated_at: datetime
     brand: Optional[BrandResponse] = None
     checklist_count: Optional[int] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class ProductLineWithBrand(ProductLineResponse):
+    """Product line with nested brand"""
+    brand: BrandResponse
+
+
+class ProductLineSummary(BaseModel):
+    """Summary statistics for product lines"""
+    id: str
+    brand_name: str
+    name: str
+    year: int
+    checklist_count: int = 0
+    inventory_count: int = 0
+    completion_pct: float = 0.0
     
     model_config = ConfigDict(from_attributes=True)
 
