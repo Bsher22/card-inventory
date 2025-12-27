@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .products import ProductLine
     from .players import Player
     from .inventory import Inventory
+    from .card_types import CardBaseType
 
 
 class CardType(Base):
@@ -59,6 +60,7 @@ class Checklist(Base):
 
     # Card classification
     card_type_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("card_types.id"))
+    base_type_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("card_base_types.id"))
     set_name: Mapped[Optional[str]] = mapped_column(String(100))  # e.g., "Base", "Bowman Prospects"
     parallel_name: Mapped[Optional[str]] = mapped_column(String(100))  # e.g., "Refractor", "Gold /50"
 
@@ -82,4 +84,5 @@ class Checklist(Base):
     product_line: Mapped["ProductLine"] = relationship(back_populates="checklists")
     player: Mapped[Optional["Player"]] = relationship(back_populates="checklists")
     card_type: Mapped[Optional["CardType"]] = relationship(back_populates="checklists")
+    base_type: Mapped[Optional["CardBaseType"]] = relationship(back_populates="checklists")
     inventory_items: Mapped[list["Inventory"]] = relationship(back_populates="checklist", cascade="all, delete-orphan")
