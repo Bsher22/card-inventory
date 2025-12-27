@@ -16,7 +16,7 @@ from app.database import get_db
 from app.models import Checklist, Player, ProductLine, Inventory
 from app.schemas import (
     ChecklistCreate, ChecklistUpdate, ChecklistResponse, ChecklistWithDetails,
-    ChecklistUploadResult, ChecklistUploadPreview
+    ChecklistUploadResult, ChecklistUploadPreview, PlayerResponse
 )
 from app.services.checklist_parser import ChecklistParser
 
@@ -274,7 +274,7 @@ async def upload_checklist(
 # PLAYER ROUTES (for checklist management)
 # ============================================
 
-@router.get("/players", response_model=list["PlayerResponse"])
+@router.get("/players", response_model=list[PlayerResponse])
 async def list_players(
     search: Optional[str] = Query(None),
     team: Optional[str] = Query(None),
@@ -284,8 +284,7 @@ async def list_players(
     db: AsyncSession = Depends(get_db),
 ):
     """List players with optional filters."""
-    from app.schemas import PlayerResponse
-    
+  
     query = select(Player)
     
     if search:
