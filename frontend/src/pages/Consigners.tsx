@@ -160,10 +160,11 @@ function ConsignerCard({
               {consigner.phone}
             </p>
           )}
-          {consigner.default_fee_per_card > 0 && (
+          {/* FIXED: Changed from default_fee_per_card to default_fee */}
+          {consigner.default_fee > 0 && (
             <p className="text-sm text-gray-600 flex items-center gap-2">
               <DollarSign size={14} className="text-gray-400" />
-              {formatCurrency(consigner.default_fee_per_card)} per card
+              {formatCurrency(consigner.default_fee)} per card
             </p>
           )}
         </div>
@@ -191,8 +192,9 @@ function ConsignerCard({
               <p className="text-lg font-bold text-gray-900">{stats.total_cards_sent}</p>
             </div>
             <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-500">Cards Returned</p>
-              <p className="text-lg font-bold text-green-600">{stats.total_cards_returned}</p>
+              <p className="text-xs text-gray-500">Cards Signed</p>
+              {/* FIXED: Changed from total_cards_returned to cards_signed */}
+              <p className="text-lg font-bold text-green-600">{stats.cards_signed}</p>
             </div>
             <div className="bg-white rounded-lg p-3">
               <p className="text-xs text-gray-500">Success Rate</p>
@@ -205,11 +207,12 @@ function ConsignerCard({
             <span className="font-bold text-gray-900">{formatCurrency(stats.total_fees_paid)}</span>
           </div>
 
-          {stats.pending_cards > 0 && (
+          {/* FIXED: Changed from pending_cards to cards_pending */}
+          {stats.cards_pending > 0 && (
             <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-700">
                 <Package size={14} className="inline mr-1" />
-                {stats.pending_cards} cards currently out
+                {stats.cards_pending} cards currently out
               </p>
             </div>
           )}
@@ -239,11 +242,12 @@ function CreateConsignerModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  {/* FIXED: Changed from default_fee_per_card to default_fee */}
   const [formData, setFormData] = useState<ConsignerCreate>({
     name: '',
     email: '',
     phone: '',
-    default_fee_per_card: 0,
+    default_fee: 0,
     payment_method: '',
     notes: '',
   });
@@ -304,11 +308,12 @@ function CreateConsignerModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Default Fee (per card)</label>
+            {/* FIXED: Changed from default_fee_per_card to default_fee */}
             <input
               type="number"
               step="0.01"
-              value={formData.default_fee_per_card || ''}
-              onChange={(e) => setFormData({ ...formData, default_fee_per_card: parseFloat(e.target.value) || 0 })}
+              value={formData.default_fee || ''}
+              onChange={(e) => setFormData({ ...formData, default_fee: parseFloat(e.target.value) || 0 })}
               placeholder="e.g., 15.00"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
