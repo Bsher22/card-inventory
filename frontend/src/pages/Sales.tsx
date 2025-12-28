@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Plus, DollarSign, Calendar, TrendingUp,
-  ChevronDown, ChevronRight, Package, Store
+  Plus, Calendar, TrendingUp,
+  ChevronDown, ChevronRight, Package
 } from 'lucide-react';
 import { api } from '../api';
 import type { Sale, SalesAnalytics } from '../types';
@@ -231,15 +231,15 @@ function SaleCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const totalCards = sale.items.reduce((sum, i) => sum + i.quantity, 0);
-  const totalProfit = sale.items.reduce((sum, i) => {
+  const totalCards = (sale.items?.reduce((sum, i) => sum + i.quantity, 0);
+  const totalProfit = (sale.items?.reduce((sum, i) => {
     const revenue = i.sale_price * i.quantity;
     const cost = (i.cost_basis || 0);
     return sum + (revenue - cost);
   }, 0);
 
   // Net revenue after fees
-  const netRevenue = (sale.subtotal || 0) + sale.shipping_charged - 
+  const netRevenue = (sale.gross_amount || 0) + sale.shipping_collected - 
     sale.platform_fees - sale.payment_fees - sale.shipping_cost;
 
   return (
@@ -284,7 +284,7 @@ function SaleCard({
 
           <div className="text-right">
             <p className="text-xl font-bold text-green-600">
-              {formatCurrency(sale.subtotal || 0)}
+              {formatCurrency(sale.gross_amount || 0)}
             </p>
             <p className={`text-sm ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               <TrendingUp size={14} className="inline mr-1" />
@@ -301,11 +301,11 @@ function SaleCard({
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Subtotal</p>
-              <p className="font-bold text-gray-900">{formatCurrency(sale.subtotal || 0)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(sale.gross_amount || 0)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping Charged</p>
-              <p className="font-bold text-gray-900">{formatCurrency(sale.shipping_charged)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(sale.shipping_collected)}</p>
             </div>
             <div className="bg-red-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Platform Fees</p>
@@ -328,7 +328,7 @@ function SaleCard({
           )}
 
           {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Items ({sale.items.length})</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Items ({(sale.items?.length ?? 0)})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -342,7 +342,7 @@ function SaleCard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {sale.items.map((item) => {
+                {sale.items?.map((item) => {
                   const revenue = item.sale_price * item.quantity;
                   const cost = item.cost_basis || 0;
                   const profit = revenue - cost;
@@ -353,10 +353,10 @@ function SaleCard({
                         Checklist #{item.checklist_id.slice(0, 8)}...
                       </td>
                       <td className="px-3 py-2 text-center">
-                        {item.is_slabbed ? (
-                          <span className="text-blue-600">{item.grade_company} {item.grade_value}</span>
+                        {false ? (
+                          <span className="text-blue-600">{""} {item.grade_value}</span>
                         ) : (
-                          <span className="text-gray-600">{item.condition || 'Raw'}</span>
+                          <span className="text-gray-600">{"" || 'Raw'}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-center text-gray-600">{item.quantity}</td>

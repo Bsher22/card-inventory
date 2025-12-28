@@ -77,15 +77,15 @@ export default function Consignments() {
               <Package size={18} />
               <span className="font-medium">Cards Out</span>
             </div>
-            <p className="text-2xl font-bold text-amber-900">{pendingValue.cards_out}</p>
-            <p className="text-sm text-amber-600">{pendingValue.items_out} line items</p>
+            <p className="text-2xl font-bold text-amber-900">{pendingValue.total_pending_cards}</p>
+            <p className="text-sm text-amber-600">{pendingValue.consignments_count} line items</p>
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <div className="flex items-center gap-2 text-blue-700 mb-1">
               <DollarSign size={18} />
               <span className="font-medium">Pending Fees</span>
             </div>
-            <p className="text-2xl font-bold text-blue-900">{formatCurrency(pendingValue.pending_fees)}</p>
+            <p className="text-2xl font-bold text-blue-900">{formatCurrency(pendingValue.total_pending_fees)}</p>
             <p className="text-sm text-blue-600">When cards return signed</p>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -217,8 +217,8 @@ function ConsignmentCard({
                   <Calendar size={14} />
                   Sent {formatDate(consignment.date_sent)}
                 </span>
-                {consignment.reference_number && (
-                  <span>Ref: {consignment.reference_number}</span>
+                {consignment.notes && (
+                  <span>Ref: {consignment.notes}</span>
                 )}
               </div>
             </div>
@@ -260,40 +260,40 @@ function ConsignmentCard({
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping Out</p>
-              <p className="font-bold text-gray-900">{formatCurrency(consignment.shipping_out_cost)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(consignment.total_fee)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping Return</p>
-              <p className="font-bold text-gray-900">{formatCurrency(consignment.shipping_return_cost)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(consignment.total_fee)}</p>
             </div>
-            <div className={`rounded-lg p-3 ${consignment.fee_paid ? 'bg-green-50' : 'bg-amber-50'}`}>
+            <div className={`rounded-lg p-3 ${consignment.total_fee ? 'bg-green-50' : 'bg-amber-50'}`}>
               <p className="text-xs text-gray-500">Fee Status</p>
-              <p className={`font-bold ${consignment.fee_paid ? 'text-green-700' : 'text-amber-700'}`}>
-                {consignment.fee_paid ? 'Paid' : 'Unpaid'}
+              <p className={`font-bold ${consignment.total_fee ? 'text-green-700' : 'text-amber-700'}`}>
+                {consignment.total_fee ? 'Paid' : 'Unpaid'}
               </p>
             </div>
           </div>
 
           {/* Tracking Info */}
-          {(consignment.shipping_out_tracking || consignment.shipping_return_tracking) && (
+          {(consignment.notes || consignment.notes) && (
             <div className="flex gap-4 mb-6 text-sm">
-              {consignment.shipping_out_tracking && (
+              {consignment.notes && (
                 <div className="flex items-center gap-2 text-gray-600">
                   <Truck size={14} />
-                  Out: {consignment.shipping_out_tracking}
+                  Out: {consignment.notes}
                 </div>
               )}
-              {consignment.shipping_return_tracking && (
+              {consignment.notes && (
                 <div className="flex items-center gap-2 text-gray-600">
                   <Truck size={14} />
-                  Return: {consignment.shipping_return_tracking}
+                  Return: {consignment.notes}
                 </div>
               )}
             </div>
           )}
 
           {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Cards ({consignment.items.length})</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Cards ({(consignment.items?.length ?? 0)})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -305,7 +305,7 @@ function ConsignmentCard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {consignment.items.map((item) => (
+                {consignment.items?.map((item) => (
                   <tr key={item.id}>
                     <td className="px-3 py-2 text-gray-900">
                       {item.checklist?.player?.name || item.checklist?.player_name_raw || 'Unknown'}
@@ -325,7 +325,7 @@ function ConsignmentCard({
 
           {/* Actions */}
           <div className="mt-6 flex gap-3">
-            {!consignment.fee_paid && consignment.status === 'complete' && (
+            {!consignment.total_fee && consignment.status === 'complete' && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();

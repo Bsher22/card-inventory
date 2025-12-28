@@ -1,5 +1,5 @@
 /**
- * Player Types
+ * Player Types - Aligned with Backend Schemas
  */
 
 export interface Player {

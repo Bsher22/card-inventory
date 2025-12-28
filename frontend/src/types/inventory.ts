@@ -1,5 +1,5 @@
 /**
- * Inventory Types
+ * Inventory Types - Aligned with Backend Schemas
  */
 
 import type { Checklist } from './checklists';

@@ -1,5 +1,5 @@
 /**
- * Beckett Import Types
+ * Beckett Import Types - Aligned with Backend Schemas
  */
 
 export interface BeckettParsedCard {
@@ -33,7 +33,7 @@ export interface BeckettImportPreview {
 }
 
 export interface BeckettImportRequest {
-  create_product_line: boolean;
+  create_product_line?: boolean;
 }
 
 export interface BeckettImportResponse {

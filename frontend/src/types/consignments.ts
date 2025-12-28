@@ -1,5 +1,5 @@
 /**
- * Consignment Types
+ * Consignment Types - Aligned with Backend Schemas
  */
 
 import type { Checklist } from './checklists';

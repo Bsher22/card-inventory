@@ -25,8 +25,8 @@ export interface Checklist {
   raw_checklist_line: string | null;
   created_at: string;
   updated_at: string;
-  player?: Player;
-  product_line?: ProductLine;
+  player?: Player | null;
+  product_line?: ProductLine | null;
   inventory_count?: number;
 }
 

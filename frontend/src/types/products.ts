@@ -1,5 +1,5 @@
 /**
- * Product Types: Brand and ProductLine
+ * Product Types: Brand and ProductLine - Aligned with Backend Schemas
  */
 
 // ============================================

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, User, MapPin, DollarSign, Phone, Mail, 
-  MoreVertical, TrendingUp, Package, Check, X
+  MoreVertical, Package
 } from 'lucide-react';
 import { api } from '../api';
 import type { Consigner, ConsignerCreate, ConsignerStats } from '../types';
@@ -138,10 +138,10 @@ function ConsignerCard({
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">{consigner.name}</h3>
-              {consigner.location && (
+              {consigner.notes && (
                 <p className="text-sm text-gray-500 flex items-center gap-1">
                   <MapPin size={12} />
-                  {consigner.location}
+                  {consigner.notes}
                 </p>
               )}
             </div>
@@ -166,10 +166,10 @@ function ConsignerCard({
               {consigner.phone}
             </p>
           )}
-          {consigner.default_fee && (
+          {consigner.default_fee_per_card && (
             <p className="text-sm text-gray-600 flex items-center gap-2">
               <DollarSign size={14} className="text-gray-400" />
-              {formatCurrency(consigner.default_fee)} per card
+              {formatCurrency(consigner.default_fee_per_card)} per card
             </p>
           )}
         </div>
@@ -198,7 +198,7 @@ function ConsignerCard({
             </div>
             <div className="bg-white rounded-lg p-3">
               <p className="text-xs text-gray-500">Cards Signed</p>
-              <p className="text-lg font-bold text-green-600">{stats.cards_signed}</p>
+              <p className="text-lg font-bold text-green-600">{stats.total_cards_sent}</p>
             </div>
             <div className="bg-white rounded-lg p-3">
               <p className="text-xs text-gray-500">Success Rate</p>
@@ -211,11 +211,11 @@ function ConsignerCard({
             <span className="font-bold text-gray-900">{formatCurrency(stats.total_fees_paid)}</span>
           </div>
 
-          {stats.cards_pending > 0 && (
+          {stats.pending_cards > 0 && (
             <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-700">
                 <Package size={14} className="inline mr-1" />
-                {stats.cards_pending} cards currently out
+                {stats.pending_cards} cards currently out
               </p>
             </div>
           )}
@@ -249,7 +249,7 @@ function CreateConsignerModal({
     name: '',
     email: '',
     phone: '',
-    location: '',
+    
     default_fee: undefined,
     payment_method: '',
     payment_details: '',
@@ -326,7 +326,7 @@ function CreateConsignerModal({
             <input
               type="number"
               step="0.01"
-              value={formData.default_fee || ''}
+              value={formData.default_fee_per_card || ''}
               onChange={(e) => setFormData({ ...formData, default_fee: parseFloat(e.target.value) || undefined })}
               placeholder="e.g., 15.00"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -348,7 +348,7 @@ function CreateConsignerModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Payment Details</label>
               <input
                 type="text"
-                value={formData.payment_details || ''}
+                value={formData.payment_method || ''}
                 onChange={(e) => setFormData({ ...formData, payment_details: e.target.value })}
                 placeholder="@username"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"

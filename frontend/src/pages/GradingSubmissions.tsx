@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, Award, Calendar, DollarSign, Truck, 
-  ChevronDown, ChevronRight, Check, Clock,
-  AlertCircle, Star, BarChart3
+  ChevronDown, ChevronRight,
+  Star, BarChart3
 } from 'lucide-react';
 import { api } from '../api';
 import type { GradingSubmission, GradingStats, PendingByCompany } from '../types';
@@ -85,8 +85,8 @@ export default function GradingSubmissions() {
               <Award size={18} />
               <span className="font-medium">Cards Out</span>
             </div>
-            <p className="text-2xl font-bold text-purple-900">{stats.cards_out_for_grading}</p>
-            <p className="text-sm text-purple-600">{stats.pending_submissions} submissions</p>
+            <p className="text-2xl font-bold text-purple-900">{stats.pending_cards}</p>
+            <p className="text-sm text-purple-600">{stats.total_submissions} submissions</p>
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <div className="flex items-center gap-2 text-blue-700 mb-1">
@@ -100,14 +100,14 @@ export default function GradingSubmissions() {
               <BarChart3 size={18} />
               <span className="font-medium">Total Graded</span>
             </div>
-            <p className="text-2xl font-bold text-amber-900">{stats.total_graded}</p>
+            <p className="text-2xl font-bold text-amber-900">{stats.total_cards_graded}</p>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
             <div className="flex items-center gap-2 text-green-700 mb-1">
               <Star size={18} />
               <span className="font-medium">Gem Rate</span>
             </div>
-            <p className="text-2xl font-bold text-green-900">{stats.gem_rate}%</p>
+            <p className="text-2xl font-bold text-green-900">{stats.average_grade}%</p>
             <p className="text-sm text-green-600">PSA 10 / BGS 10</p>
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function GradingSubmissions() {
               <div key={company.code} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
                 <span className="font-bold text-gray-900">{company.code}</span>
                 <span className="text-gray-500">{company.cards_out} cards</span>
-                <span className="text-gray-400">({company.pending_submissions} subs)</span>
+                <span className="text-gray-400">({company.total_submissions} subs)</span>
               </div>
             ))}
           </div>
@@ -130,13 +130,13 @@ export default function GradingSubmissions() {
       )}
 
       {/* Grade Distribution */}
-      {stats && Object.keys(stats.grade_distribution).length > 0 && (
+      {stats && Object.keys(stats.total_fees).length > 0 && (
         <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
           <h3 className="font-medium text-gray-900 mb-3">Grade Distribution</h3>
           <div className="flex items-end gap-1 h-24">
             {['10', '9.5', '9', '8.5', '8', '7', '6', '5', '4', '3', '2', '1'].map((grade) => {
-              const count = stats.grade_distribution[grade] || 0;
-              const maxCount = Math.max(...Object.values(stats.grade_distribution));
+              const count = stats.total_fees[grade] || 0;
+              const maxCount = Math.max(...Object.values(stats.total_fees));
               const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
               
               return (
@@ -235,10 +235,10 @@ function SubmissionCard({
   onToggle: () => void;
 }) {
   const status = STATUS_STYLES[submission.status] || STATUS_STYLES.preparing;
-  const totalCards = submission.items.length;
-  const gradedCards = submission.items.filter(i => i.grade_value !== null).length;
-  const totalFees = submission.grading_fee + submission.shipping_to_cost + 
-    submission.shipping_return_cost + submission.insurance_cost;
+  const totalCards = (submission.items?.length ?? 0);
+  const gradedCards = submission.items?.filter(i => i.grade_received !== null).length;
+  const totalFees = submission.total_fee + submission.shipping_cost + 
+    submission.shipping_cost + submission.shipping_cost;
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -256,7 +256,7 @@ function SubmissionCard({
             <div>
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-gray-900">
-                  {submission.grading_company?.name || 'Unknown Company'}
+                  {submission.company?.name || 'Unknown Company'}
                 </h3>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
                   {status.label}
@@ -296,20 +296,20 @@ function SubmissionCard({
           <div className="flex-1 h-0.5 bg-gray-200" />
           <TimelineStep 
             label="Shipped" 
-            date={submission.date_shipped}
-            isComplete={!!submission.date_shipped}
+            date={submission.date_submitted}
+            isComplete={!!submission.date_submitted}
           />
           <div className="flex-1 h-0.5 bg-gray-200" />
           <TimelineStep 
             label="Received" 
-            date={submission.date_received}
-            isComplete={!!submission.date_received}
+            date={submission.date_returned}
+            isComplete={!!submission.date_returned}
           />
           <div className="flex-1 h-0.5 bg-gray-200" />
           <TimelineStep 
             label="Graded" 
-            date={submission.date_graded}
-            isComplete={!!submission.date_graded}
+            date={submission.date_returned}
+            isComplete={!!submission.date_returned}
           />
           <div className="flex-1 h-0.5 bg-gray-200" />
           <TimelineStep 
@@ -327,19 +327,19 @@ function SubmissionCard({
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Grading Fee</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.grading_fee)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(submission.total_fee)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping To</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_to_cost)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping Back</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_return_cost)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Insurance</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.insurance_cost)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
             </div>
             <div className="bg-blue-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Total Cost</p>
@@ -351,30 +351,30 @@ function SubmissionCard({
           <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm text-amber-700">
               <DollarSign size={14} className="inline mr-1" />
-              Total Declared Value: {formatCurrency(submission.total_declared_value)}
+              Total Declared Value: {formatCurrency(submission.total_fee)}
             </p>
           </div>
 
           {/* Tracking Info */}
-          {(submission.shipping_to_tracking || submission.shipping_return_tracking) && (
+          {(submission.notes || submission.notes) && (
             <div className="flex gap-4 mb-6 text-sm">
-              {submission.shipping_to_tracking && (
+              {submission.notes && (
                 <div className="flex items-center gap-2 text-gray-600">
                   <Truck size={14} />
-                  To: {submission.shipping_to_tracking}
+                  To: {submission.notes}
                 </div>
               )}
-              {submission.shipping_return_tracking && (
+              {submission.notes && (
                 <div className="flex items-center gap-2 text-gray-600">
                   <Truck size={14} />
-                  Return: {submission.shipping_return_tracking}
+                  Return: {submission.notes}
                 </div>
               )}
             </div>
           )}
 
           {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Cards ({submission.items.length})</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Cards ({(submission.items?.length ?? 0)})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -388,14 +388,14 @@ function SubmissionCard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {submission.items.map((item) => (
+                {submission.items?.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-3 py-2 text-gray-500">{item.line_number}</td>
+                    <td className="px-3 py-2 text-gray-500">{item.id}</td>
                     <td className="px-3 py-2 text-gray-900">
                       {item.checklist?.player?.name || item.checklist?.player_name_raw || 'Unknown'}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {item.was_signed ? (
+                      {item.notes ? (
                         <span className="text-purple-600">✓</span>
                       ) : (
                         <span className="text-gray-300">-</span>
@@ -405,17 +405,17 @@ function SubmissionCard({
                       {item.declared_value ? formatCurrency(item.declared_value) : '-'}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {item.grade_value ? (
+                      {item.grade_received ? (
                         <span className={`font-bold ${
-                          item.grade_value >= 10 ? 'text-green-600' :
-                          item.grade_value >= 9 ? 'text-blue-600' :
+                          item.grade_received >= 10 ? 'text-green-600' :
+                          item.grade_received >= 9 ? 'text-blue-600' :
                           'text-gray-600'
                         }`}>
-                          {item.grade_value}
-                          {item.auto_grade && ` / ${item.auto_grade}`}
+                          {item.grade_received}
+                          {item.auto_grade_received && ` / ${item.auto_grade_received}`}
                         </span>
                       ) : (
-                        <GradeStatusBadge status={item.status} />
+                        <GradeStatusBadge status={(item.notes ?? "pending")} />
                       )}
                     </td>
                     <td className="px-3 py-2 text-gray-500 font-mono text-xs">

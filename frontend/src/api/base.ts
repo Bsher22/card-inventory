@@ -3,8 +3,20 @@
  * Shared utilities for all API clients
  */
 
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-console.log('API_BASE:', API_BASE);  // Add this line
+// Get API base URL from environment or default to localhost
+const getApiBase = (): string => {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return 'http://localhost:8000/api';
+};
+
+export const API_BASE = getApiBase();
+
+// Debug log in development
+if (import.meta.env?.DEV) {
+  console.log('API_BASE:', API_BASE);
+}
 
 /**
  * Handle API response and throw on error
@@ -27,7 +39,7 @@ export async function handleResponse<T>(response: Response): Promise<T> {
  */
 export function buildQueryString(params: Record<string, unknown>): string {
   const filtered = Object.entries(params)
-    .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
   return filtered.length > 0 ? `?${filtered.join('&')}` : '';
 }

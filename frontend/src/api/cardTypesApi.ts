@@ -1,9 +1,9 @@
 /**
- * Card Types API Client
- * Handles base types, parallels, and categories
+ * Card Types and Parallels API Client
+ * API functions for managing base types, parallels, and checklist parsing
  */
 
-import { apiRequest, buildQueryString } from './base';
+import { API_BASE, handleResponse, buildQueryString } from './base';
 import type {
   CardBaseType,
   CardBaseTypeCreate,
@@ -19,142 +19,255 @@ import type {
   ParallelFilter,
   CardPrefixMapping,
   CardPrefixMappingCreate,
-} from '../types';
+  ChecklistParseResult,
+  BulkChecklistImportResult,
+  ChecklistCreateWithTypes,
+} from '../types/cardTypes';
 
 // ============================================
-// CARD BASE TYPES
+// CARD BASE TYPES API
 // ============================================
 
-export async function getBaseTypes(): Promise<CardBaseType[]> {
-  return apiRequest<CardBaseType[]>('/base-types');
-}
+export const baseTypesApi = {
+  /**
+   * Get all base types
+   */
+  async list(): Promise<CardBaseType[]> {
+    const response = await fetch(`${API_BASE}/base-types`);
+    return handleResponse<CardBaseType[]>(response);
+  },
 
-export async function getBaseTypesWithCounts(): Promise<CardBaseTypeWithCounts[]> {
-  return apiRequest<CardBaseTypeWithCounts[]>('/base-types/with-counts');
-}
+  /**
+   * Get all base types with counts
+   */
+  async listWithCounts(): Promise<CardBaseTypeWithCounts[]> {
+    const response = await fetch(`${API_BASE}/base-types/with-counts`);
+    return handleResponse<CardBaseTypeWithCounts[]>(response);
+  },
 
-export async function getBaseType(id: string): Promise<CardBaseType> {
-  return apiRequest<CardBaseType>(`/base-types/${id}`);
-}
+  /**
+   * Get a specific base type
+   */
+  async get(id: string): Promise<CardBaseType> {
+    const response = await fetch(`${API_BASE}/base-types/${id}`);
+    return handleResponse<CardBaseType>(response);
+  },
 
-export async function createBaseType(data: CardBaseTypeCreate): Promise<CardBaseType> {
-  return apiRequest<CardBaseType>('/base-types', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
+  /**
+   * Create a new base type
+   */
+  async create(data: CardBaseTypeCreate): Promise<CardBaseType> {
+    const response = await fetch(`${API_BASE}/base-types`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<CardBaseType>(response);
+  },
 
-export async function updateBaseType(id: string, data: CardBaseTypeUpdate): Promise<CardBaseType> {
-  return apiRequest<CardBaseType>(`/base-types/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-}
-
-// ============================================
-// PARALLEL CATEGORIES
-// ============================================
-
-export async function getParallelCategories(): Promise<ParallelCategory[]> {
-  return apiRequest<ParallelCategory[]>('/parallel-categories');
-}
-
-export async function getParallelCategoriesWithParallels(): Promise<ParallelCategoryWithParallels[]> {
-  return apiRequest<ParallelCategoryWithParallels[]>('/parallel-categories/with-parallels');
-}
-
-export async function getParallelCategory(id: string): Promise<ParallelCategoryWithParallels> {
-  return apiRequest<ParallelCategoryWithParallels>(`/parallel-categories/${id}`);
-}
-
-export async function createParallelCategory(data: ParallelCategoryCreate): Promise<ParallelCategory> {
-  return apiRequest<ParallelCategory>('/parallel-categories', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-// ============================================
-// PARALLELS
-// ============================================
-
-export async function getParallels(filters?: ParallelFilter): Promise<ParallelWithCategory[]> {
-  const query = filters ? buildQueryString(filters) : '';
-  return apiRequest<ParallelWithCategory[]>(`/parallels${query}`);
-}
-
-export async function getParallelsByRarity(maxPrintRun = 50): Promise<ParallelWithCategory[]> {
-  return apiRequest<ParallelWithCategory[]>(`/parallels/by-rarity?max_print_run=${maxPrintRun}`);
-}
-
-export async function getParallel(id: string): Promise<ParallelWithCategory> {
-  return apiRequest<ParallelWithCategory>(`/parallels/${id}`);
-}
-
-export async function createParallel(data: ParallelCreate): Promise<Parallel> {
-  return apiRequest<Parallel>('/parallels', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function updateParallel(id: string, data: ParallelUpdate): Promise<Parallel> {
-  return apiRequest<Parallel>(`/parallels/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function deleteParallel(id: string): Promise<void> {
-  return apiRequest<void>(`/parallels/${id}`, { method: 'DELETE' });
-}
+  /**
+   * Update a base type
+   */
+  async update(id: string, data: CardBaseTypeUpdate): Promise<CardBaseType> {
+    const response = await fetch(`${API_BASE}/base-types/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<CardBaseType>(response);
+  },
+};
 
 // ============================================
-// PREFIX MAPPINGS
+// PARALLEL CATEGORIES API
 // ============================================
 
-export async function getPrefixMappings(
-  productType?: string,
-  isProspect?: boolean
-): Promise<CardPrefixMapping[]> {
-  const params: Record<string, unknown> = {};
-  if (productType) params.product_type = productType;
-  if (isProspect !== undefined) params.is_prospect = isProspect;
-  const query = buildQueryString(params);
-  return apiRequest<CardPrefixMapping[]>(`/prefix-mappings${query}`);
-}
+export const parallelCategoriesApi = {
+  /**
+   * Get all parallel categories
+   */
+  async list(): Promise<ParallelCategory[]> {
+    const response = await fetch(`${API_BASE}/parallel-categories`);
+    return handleResponse<ParallelCategory[]>(response);
+  },
 
-export async function createPrefixMapping(data: CardPrefixMappingCreate): Promise<CardPrefixMapping> {
-  return apiRequest<CardPrefixMapping>('/prefix-mappings', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
+  /**
+   * Get all categories with their parallels
+   */
+  async listWithParallels(): Promise<ParallelCategoryWithParallels[]> {
+    const response = await fetch(`${API_BASE}/parallel-categories/with-parallels`);
+    return handleResponse<ParallelCategoryWithParallels[]>(response);
+  },
+
+  /**
+   * Get a specific category with parallels
+   */
+  async get(id: string): Promise<ParallelCategoryWithParallels> {
+    const response = await fetch(`${API_BASE}/parallel-categories/${id}`);
+    return handleResponse<ParallelCategoryWithParallels>(response);
+  },
+
+  /**
+   * Create a new category
+   */
+  async create(data: ParallelCategoryCreate): Promise<ParallelCategory> {
+    const response = await fetch(`${API_BASE}/parallel-categories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<ParallelCategory>(response);
+  },
+};
+
+// ============================================
+// PARALLELS API
+// ============================================
+
+export const parallelsApi = {
+  /**
+   * Get all parallels with optional filtering
+   */
+  async list(filters?: ParallelFilter): Promise<ParallelWithCategory[]> {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : '';
+    const response = await fetch(`${API_BASE}/parallels${queryString}`);
+    return handleResponse<ParallelWithCategory[]>(response);
+  },
+
+  /**
+   * Get parallels by rarity (limited print runs)
+   */
+  async listByRarity(maxPrintRun: number = 50): Promise<ParallelWithCategory[]> {
+    const response = await fetch(`${API_BASE}/parallels/by-rarity?max_print_run=${maxPrintRun}`);
+    return handleResponse<ParallelWithCategory[]>(response);
+  },
+
+  /**
+   * Get a specific parallel
+   */
+  async get(id: string): Promise<ParallelWithCategory> {
+    const response = await fetch(`${API_BASE}/parallels/${id}`);
+    return handleResponse<ParallelWithCategory>(response);
+  },
+
+  /**
+   * Create a new parallel
+   */
+  async create(data: ParallelCreate): Promise<Parallel> {
+    const response = await fetch(`${API_BASE}/parallels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Parallel>(response);
+  },
+
+  /**
+   * Update a parallel
+   */
+  async update(id: string, data: ParallelUpdate): Promise<Parallel> {
+    const response = await fetch(`${API_BASE}/parallels/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Parallel>(response);
+  },
+
+  /**
+   * Delete a parallel
+   */
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/parallels/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(error.detail || 'Failed to delete parallel');
+    }
+  },
+};
+
+// ============================================
+// PREFIX MAPPINGS API
+// ============================================
+
+export const prefixMappingsApi = {
+  /**
+   * Get all prefix mappings
+   */
+  async list(productType?: string, isProspect?: boolean): Promise<CardPrefixMapping[]> {
+    const params: Record<string, unknown> = {};
+    if (productType) params.product_type = productType;
+    if (isProspect !== undefined) params.is_prospect = isProspect;
+
+    const queryString = buildQueryString(params);
+    const response = await fetch(`${API_BASE}/prefix-mappings${queryString}`);
+    return handleResponse<CardPrefixMapping[]>(response);
+  },
+
+  /**
+   * Create a new prefix mapping
+   */
+  async create(data: CardPrefixMappingCreate): Promise<CardPrefixMapping> {
+    const response = await fetch(`${API_BASE}/prefix-mappings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<CardPrefixMapping>(response);
+  },
+};
+
+// ============================================
+// CHECKLIST PARSING API
+// ============================================
+
+export const checklistParserApi = {
+  /**
+   * Parse a checklist PDF and return extracted prospect cards
+   * Does NOT save to database - returns for review first
+   */
+  async parsePdf(file: File): Promise<ChecklistParseResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE}/checklists/parse-pdf`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse<ChecklistParseResult>(response);
+  },
+
+  /**
+   * Import previously parsed checklist cards into database
+   */
+  async importParsed(
+    productLineId: string,
+    parsedCards: ChecklistCreateWithTypes[]
+  ): Promise<BulkChecklistImportResult> {
+    const response = await fetch(`${API_BASE}/checklists/import-parsed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_line_id: productLineId,
+        parsed_cards: parsedCards,
+      }),
+    });
+    return handleResponse<BulkChecklistImportResult>(response);
+  },
+};
 
 // ============================================
 // COMBINED EXPORT
 // ============================================
 
 export const cardTypesApi = {
-  // Base Types
-  getBaseTypes,
-  getBaseTypesWithCounts,
-  getBaseType,
-  createBaseType,
-  updateBaseType,
-  // Parallel Categories
-  getParallelCategories,
-  getParallelCategoriesWithParallels,
-  getParallelCategory,
-  createParallelCategory,
-  // Parallels
-  getParallels,
-  getParallelsByRarity,
-  getParallel,
-  createParallel,
-  updateParallel,
-  deleteParallel,
-  // Prefix Mappings
-  getPrefixMappings,
-  createPrefixMapping,
+  baseTypes: baseTypesApi,
+  parallelCategories: parallelCategoriesApi,
+  parallels: parallelsApi,
+  prefixMappings: prefixMappingsApi,
+  checklistParser: checklistParserApi,
 };
+
+export default cardTypesApi;

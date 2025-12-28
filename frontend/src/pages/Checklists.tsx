@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Filter, ChevronDown, Star, Pen, Award } from 'lucide-react';
+import { Search, ChevronDown, Star, Pen } from 'lucide-react';
 import { api } from '../api';
 import type { ProductLineSummary } from '../types';
 
@@ -16,7 +16,7 @@ export default function Checklists() {
   });
 
   const { data: checklists, isLoading } = useQuery({
-    queryKey: ['checklists', filterProductLine, filterRookie, filterAuto, search],
+    queryKey: ['checklists'ProductLineRookieAuto, search],
     queryFn: () => api.checklists.getChecklists({
       product_line_id: filterProductLine || undefined,
       is_rookie: filterRookie,
@@ -168,7 +168,7 @@ export default function Checklists() {
                           Relic
                         </span>
                       )}
-                      {card.is_short_print && (
+                      {card.serial_numbered && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">
                           SP
                         </span>
@@ -177,9 +177,9 @@ export default function Checklists() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className={`font-medium ${
-                      card.inventory_quantity > 0 ? 'text-green-600' : 'text-gray-400'
+                      card.inventory_count > 0 ? 'text-green-600' : 'text-gray-400'
                     }`}>
-                      {card.inventory_quantity}
+                      {card.inventory_count}
                     </span>
                   </td>
                 </tr>

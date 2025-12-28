@@ -1,5 +1,5 @@
 /**
- * Financial Types: Purchase, Sale, Analytics
+ * Financial Types: Purchase, Sale, Analytics - Aligned with Backend Schemas
  */
 
 import type { Checklist } from './checklists';

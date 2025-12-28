@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Plus, ShoppingCart, Calendar, Store, 
+  Plus, Calendar, 
   ChevronDown, ChevronRight, Package
 } from 'lucide-react';
 import { api } from '../api';
@@ -35,9 +35,9 @@ export default function Purchases() {
   });
 
   // Calculate totals
-  const totalSpent = purchases?.reduce((sum, p) => sum + (p.total_cost || 0), 0) || 0;
+  const totalSpent = purchases?.reduce((sum, p) => sum + (p.total || 0), 0) || 0;
   const totalCards = purchases?.reduce((sum, p) => 
-    sum + p.items.reduce((isum, i) => isum + i.quantity, 0), 0
+    sum + (p.items?.reduce((isum, i) => isum + i.quantity, 0), 0
   ) || 0;
 
   return (
@@ -142,7 +142,7 @@ function PurchaseCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const totalCards = purchase.items.reduce((sum, i) => sum + i.quantity, 0);
+  const totalCards = (purchase.items?.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -162,9 +162,9 @@ function PurchaseCard({
                 <h3 className="font-semibold text-gray-900">
                   {purchase.vendor || 'Unknown Vendor'}
                 </h3>
-                {purchase.invoice_number && (
+                {purchase.order_number && (
                   <span className="text-sm text-gray-500">
-                    #{purchase.invoice_number}
+                    #{purchase.order_number}
                   </span>
                 )}
               </div>
@@ -183,11 +183,11 @@ function PurchaseCard({
 
           <div className="text-right">
             <p className="text-xl font-bold text-gray-900">
-              {formatCurrency(purchase.total_cost || 0)}
+              {formatCurrency(purchase.total || 0)}
             </p>
-            {purchase.shipping_cost > 0 && (
+            {purchase.shipping > 0 && (
               <p className="text-sm text-gray-500">
-                +{formatCurrency(purchase.shipping_cost)} shipping
+                +{formatCurrency(purchase.shipping)} shipping
               </p>
             )}
           </div>
@@ -204,7 +204,7 @@ function PurchaseCard({
           )}
 
           {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Items ({purchase.items.length})</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Items ({(purchase.items?.length ?? 0)})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -217,24 +217,24 @@ function PurchaseCard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {purchase.items.map((item) => (
+                {purchase.items?.map((item) => (
                   <tr key={item.id}>
                     <td className="px-3 py-2 text-gray-900">
                       Checklist #{item.checklist_id.slice(0, 8)}...
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {item.is_slabbed ? (
-                        <span className="text-blue-600">{item.grade_company} {item.grade_value}</span>
+                      {false ? (
+                        <span className="text-blue-600">{""} {item.grade_value}</span>
                       ) : (
                         <span className="text-gray-600">{item.condition}</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-center text-gray-600">{item.quantity}</td>
                     <td className="px-3 py-2 text-right text-gray-600">
-                      {formatCurrency(item.unit_cost)}
+                      {formatCurrency(item.unit_price)}
                     </td>
                     <td className="px-3 py-2 text-right font-medium text-gray-900">
-                      {formatCurrency(item.unit_cost * item.quantity)}
+                      {formatCurrency(item.unit_price * item.quantity)}
                     </td>
                   </tr>
                 ))}
@@ -245,7 +245,7 @@ function PurchaseCard({
                     Total
                   </td>
                   <td className="px-3 py-2 text-right font-bold text-gray-900">
-                    {formatCurrency(purchase.total_cost || 0)}
+                    {formatCurrency(purchase.total || 0)}
                   </td>
                 </tr>
               </tfoot>

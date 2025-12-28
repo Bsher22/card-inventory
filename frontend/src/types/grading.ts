@@ -1,5 +1,5 @@
 /**
- * Grading Types
+ * Grading Types - Aligned with Backend Schemas
  */
 
 import type { Checklist } from './checklists';

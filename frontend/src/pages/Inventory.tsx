@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  Search, ChevronDown, Plus, Minus, Package, 
-  Pen, Award, Filter 
+  Search, ChevronDown, Plus, Minus, 
+  Pen, Award 
 } from 'lucide-react';
 import { api } from '../api';
 import type { InventoryWithCard } from '../types';
@@ -28,7 +28,7 @@ export default function Inventory() {
   });
 
   const { data: inventory, isLoading } = useQuery({
-    queryKey: ['inventory', filterBrand, search, inStockOnly],
+    queryKey: ['inventory'Brand, search, inStockOnly],
     queryFn: () => api.inventory.getInventory({
       brand_id: filterBrand || undefined,
       search: search || undefined,

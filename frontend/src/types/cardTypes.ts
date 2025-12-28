@@ -146,6 +146,51 @@ export interface ParallelFilter {
   min_print_run?: number;
   year_introduced?: number;
   search?: string;
+  [key: string]: string | number | boolean | undefined;  // Index signature for buildQueryString
+}
+
+// ============================================
+// CHECKLIST PARSING TYPES (for PDF/Excel imports)
+// ============================================
+
+export interface ChecklistCreateWithTypes {
+  card_number: string;
+  card_prefix?: string | null;
+  card_suffix?: string | null;
+  player_name_raw: string;
+  team?: string | null;
+  set_name?: string | null;
+  is_autograph?: boolean;
+  is_relic?: boolean;
+  is_rookie_card?: boolean;
+  is_first_bowman?: boolean;
+  serial_numbered?: number | null;
+  base_type_id?: string | null;
+  parallel_id?: string | null;
+}
+
+export interface ChecklistParseResult {
+  success: boolean;
+  product_name: string | null;
+  year: number | null;
+  total_cards: number;
+  prospect_cards: number;
+  auto_cards: number;
+  first_bowman_cards: number;
+  parsed_cards: ChecklistCreateWithTypes[];
+  errors: string[];
+  warnings: string[];
+}
+
+export interface BulkChecklistImportResult {
+  success: boolean;
+  product_line_id: string | null;
+  cards_created: number;
+  cards_updated: number;
+  cards_skipped: number;
+  players_created: number;
+  players_matched: number;
+  errors: string[];
 }
 
 // ============================================
