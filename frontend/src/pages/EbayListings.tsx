@@ -5,21 +5,19 @@
  * Accessed via URL params with selected inventory IDs.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Copy,
   Check,
-  DollarSign,
   Tag,
   Package,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
 } from 'lucide-react';
-import { api } from '../api';
+import { ebayApi } from '../api';
 import type { EbayListingData, EbayItemSpecifics } from '../types/ebay';
 
 export default function EbayListings() {
@@ -32,7 +30,7 @@ export default function EbayListings() {
   // Fetch listing data
   const { data, isLoading, error } = useQuery({
     queryKey: ['ebay-listings', inventoryIds],
-    queryFn: () => api.ebay.generateListings(inventoryIds),
+    queryFn: () => ebayApi.generateListings({ inventory_ids: inventoryIds }),
     enabled: inventoryIds.length > 0,
   });
 
@@ -108,7 +106,7 @@ export default function EbayListings() {
       {/* Listings */}
       {data && (
         <div className="space-y-6">
-          {data.listings.map((listing, index) => (
+          {data.listings.map((listing: EbayListingData, index: number) => (
             <ListingCard key={listing.inventory_id} listing={listing} index={index + 1} />
           ))}
         </div>

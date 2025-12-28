@@ -21,7 +21,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { api } from '../api';
-import type { InventoryWithDetails, Brand, ProductLine } from '../types';
+import type { InventoryWithCard } from '../types';
 
 export default function Inventory() {
   const navigate = useNavigate();
@@ -62,7 +62,7 @@ export default function Inventory() {
   const filteredInventory = useMemo(() => {
     if (!inventory) return [];
     
-    return inventory.filter((item: InventoryWithDetails) => {
+    return inventory.filter((item) => {
       if (filterSigned !== undefined && item.is_signed !== filterSigned) return false;
       if (filterSlabbed !== undefined && item.is_slabbed !== filterSlabbed) return false;
       return true;
@@ -84,7 +84,7 @@ export default function Inventory() {
     if (selectedIds.size === filteredInventory.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredInventory.map((item: InventoryWithDetails) => item.id)));
+      setSelectedIds(new Set(filteredInventory.map((item) => item.id)));
     }
   };
 
@@ -192,7 +192,7 @@ export default function Inventory() {
             className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Brands</option>
-            {brands?.map((brand: Brand) => (
+            {brands?.map((brand) => (
               <option key={brand.id} value={brand.id}>{brand.name}</option>
             ))}
           </select>
@@ -206,7 +206,7 @@ export default function Inventory() {
             className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Products</option>
-            {productLines?.map((pl: ProductLine) => (
+            {productLines?.map((pl) => (
               <option key={pl.id} value={pl.id}>{pl.year} {pl.name}</option>
             ))}
           </select>
@@ -287,7 +287,7 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredInventory.map((item: InventoryWithDetails) => (
+              {filteredInventory.map((item) => (
                 <tr
                   key={item.id}
                   className={`hover:bg-gray-50 transition-colors ${
@@ -341,7 +341,7 @@ export default function Inventory() {
                     {item.parallel && (
                       <div className="text-xs text-gray-500">
                         {item.parallel.name}
-                        {item.parallel.serial_numbered && ` /${item.parallel.serial_numbered}`}
+                        {item.parallel.is_numbered && item.parallel.numbered_to && ` /${item.parallel.numbered_to}`}
                       </div>
                     )}
                   </td>
