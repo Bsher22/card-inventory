@@ -1,8 +1,3 @@
-The regex didn't catch everything. Let me give you the full corrected Checklists.tsx:
-powershellcd C:\Users\Brian\Desktop\IDGAS\frontend
-
-# Replace the entire content
-@'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, ChevronDown, Star, Pen } from 'lucide-react';
