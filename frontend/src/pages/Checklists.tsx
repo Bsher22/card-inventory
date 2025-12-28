@@ -1,3 +1,8 @@
+The regex didn't catch everything. Let me give you the full corrected Checklists.tsx:
+powershellcd C:\Users\Brian\Desktop\IDGAS\frontend
+
+# Replace the entire content
+@'
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, ChevronDown, Star, Pen } from 'lucide-react';
@@ -19,7 +24,7 @@ export default function Checklists() {
     queryFn: () => api.checklists.getChecklists({
       product_line_id: filterProductLine || undefined,
       is_rookie: filterRookie,
-      is_autograph: filterAuto,
+      is_auto: filterAuto,
       search: search || undefined,
       limit: 200,
     }),
@@ -142,7 +147,7 @@ export default function Checklists() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      {card.is_rookie && (
+                      {card.is_rookie_card && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">
                           RC
                         </span>
