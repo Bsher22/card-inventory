@@ -5,7 +5,7 @@
  * All TypeScript types exported from a single location.
  *
  * Usage:
- *   import type { Brand, ProductLine, Checklist, Inventory } from '@/types';
+ *   import type { Brand, ProductLine, Checklist, Inventory, User } from '@/types';
  *   import { CONDITION_OPTIONS, getParallelDisplayName } from '@/types';
  */
 
@@ -38,3 +38,6 @@ export * from './beckett';
 
 // Card Types
 export * from './cardTypes';
+
+// Authentication
+export * from './auth';

@@ -14,3 +14,5 @@ python-dotenv==1.0.0
 rapidfuzz==3.6.1  # For fuzzy player name matching
 httpx==0.26.0
 PyMuPDF>=1.24.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4

@@ -1,7 +1,10 @@
 /**
  * API Base Configuration
- * Shared utilities for all API clients
+ *
+ * Shared utilities for all API clients with authentication support.
  */
+
+import { getAuthToken } from '../context/AuthContext';
 
 // Get API base URL from environment or default to localhost
 const getApiBase = (): string => {
@@ -19,14 +22,60 @@ if (import.meta.env?.DEV) {
 }
 
 /**
- * Handle API response and throw on error
+ * Build query string from params object
  */
-export async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+export function buildQueryString(params: Record<string, unknown>): string {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.append(key, String(value));
+    }
+  });
+
+  const queryString = searchParams.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
+/**
+ * Get headers including auth token
+ */
+function getHeaders(contentType?: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  // Add content type if specified
+  if (contentType) {
+    headers['Content-Type'] = contentType;
   }
 
+  // Add auth token if available
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+/**
+ * Handle API response - check for auth errors
+ */
+async function handleResponse<T>(response: Response): Promise<T> {
+  // Handle 401 Unauthorized - redirect to login
+  if (response.status === 401) {
+    // Clear stored token
+    localStorage.removeItem('idgas_token');
+    // Redirect to login
+    window.location.href = '/login';
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  // Handle 204 No Content
   if (response.status === 204) {
     return undefined as T;
   }
@@ -35,28 +84,15 @@ export async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 /**
- * Build query string from params object
+ * Make an authenticated API request
  */
-export function buildQueryString(params: Record<string, unknown>): string {
-  const filtered = Object.entries(params)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
-  return filtered.length > 0 ? `?${filtered.join('&')}` : '';
-}
-
-/**
- * Make a JSON API request
- */
-export async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...getHeaders(options.body instanceof FormData ? undefined : 'application/json'),
       ...options.headers,
     },
   });
@@ -65,18 +101,58 @@ export async function apiRequest<T>(
 }
 
 /**
- * Make a form data API request (for file uploads)
+ * GET request
  */
-export async function apiFormRequest<T>(
-  endpoint: string,
-  formData: FormData
-): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
+export async function apiGet<T>(endpoint: string): Promise<T> {
+  return apiRequest<T>(endpoint, { method: 'GET' });
+}
 
-  const response = await fetch(url, {
+/**
+ * POST request with JSON body
+ */
+export async function apiPost<T>(endpoint: string, data?: unknown): Promise<T> {
+  return apiRequest<T>(endpoint, {
+    method: 'POST',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+/**
+ * PUT request with JSON body
+ */
+export async function apiPut<T>(endpoint: string, data?: unknown): Promise<T> {
+  return apiRequest<T>(endpoint, {
+    method: 'PUT',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+/**
+ * PATCH request with JSON body
+ */
+export async function apiPatch<T>(endpoint: string, data?: unknown): Promise<T> {
+  return apiRequest<T>(endpoint, {
+    method: 'PATCH',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+/**
+ * DELETE request
+ */
+export async function apiDelete<T>(endpoint: string): Promise<T> {
+  return apiRequest<T>(endpoint, { method: 'DELETE' });
+}
+
+/**
+ * POST request with FormData (file uploads)
+ */
+export async function apiFormRequest<T>(endpoint: string, formData: FormData): Promise<T> {
+  return apiRequest<T>(endpoint, {
     method: 'POST',
     body: formData,
   });
-
-  return handleResponse<T>(response);
 }
+
+// Legacy export for compatibility
+export { apiFormRequest as apiPostFormData };

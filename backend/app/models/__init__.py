@@ -5,7 +5,7 @@ Models Package - Barrel Exports
 All SQLAlchemy models exported from a single location.
 
 Usage:
-    from app.models import Brand, ProductLine, Checklist, Inventory
+    from app.models import Brand, ProductLine, Checklist, Inventory, User
 """
 
 from .base import Base
@@ -44,6 +44,9 @@ from .card_types import (
     CardPrefixMapping,
 )
 
+# Authentication
+from .users import User
+
 
 __all__ = [
     # Base
@@ -77,4 +80,6 @@ __all__ = [
     "ParallelCategory",
     "Parallel",
     "CardPrefixMapping",
+    # Authentication
+    "User",
 ]

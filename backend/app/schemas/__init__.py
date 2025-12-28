@@ -5,7 +5,7 @@ Schemas Package - Barrel Exports
 All Pydantic schemas exported from a single location.
 
 Usage:
-    from app.schemas import BrandCreate, ProductLineResponse, ChecklistFilters
+    from app.schemas import BrandCreate, ProductLineResponse, ChecklistFilters, Token
 """
 
 from .base import BaseSchema, PaginatedResponse, MessageResponse
@@ -152,6 +152,19 @@ from .card_types import (
     ParallelFilter,
 )
 
+# Authentication
+from .auth import (
+    Token,
+    TokenData,
+    LoginRequest,
+    UserBase,
+    UserCreate,
+    UserUpdate,
+    UserResponse,
+    UserInDB,
+    SetupRequest,
+)
+
 
 __all__ = [
     # Base
@@ -273,4 +286,14 @@ __all__ = [
     "CardPrefixMappingCreate",
     "CardPrefixMappingResponse",
     "ParallelFilter",
+    # Authentication
+    "Token",
+    "TokenData",
+    "LoginRequest",
+    "UserBase",
+    "UserCreate",
+    "UserUpdate",
+    "UserResponse",
+    "UserInDB",
+    "SetupRequest",
 ]

@@ -2,7 +2,7 @@
 Card Inventory Management System - Main Application
 
 FastAPI backend for managing baseball card inventory, checklists,
-purchases, and sales with analytics.
+purchases, and sales with analytics and authentication.
 """
 
 from contextlib import asynccontextmanager
@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routes import (
+    auth_router,
     products_router,
     checklists_router,
     inventory_router,
@@ -38,7 +39,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="Baseball card inventory management system with checklist uploads, "
-                "inventory tracking, and sales analytics.",
+                "inventory tracking, sales analytics, and user authentication.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -53,6 +54,10 @@ app.add_middleware(
 )
 
 # Include routers
+# Auth router FIRST (for /api/auth/* endpoints)
+app.include_router(auth_router, prefix="/api", tags=["Authentication"])
+
+# Business routers
 app.include_router(products_router, prefix="/api", tags=["Brands & Product Lines"])
 app.include_router(checklists_router, prefix="/api", tags=["Checklists & Players"])
 app.include_router(inventory_router, prefix="/api", tags=["Inventory"])
