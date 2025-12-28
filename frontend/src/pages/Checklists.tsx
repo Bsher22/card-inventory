@@ -18,7 +18,7 @@ export default function Checklists() {
     queryKey: ['checklists', filterProductLine, filterRookie, filterAuto, search],
     queryFn: () => api.checklists.getChecklists({
       product_line_id: filterProductLine || undefined,
-      is_rookie_card: filterRookie,
+      is_rookie: filterRookie,
       is_autograph: filterAuto,
       search: search || undefined,
       limit: 200,
@@ -142,7 +142,7 @@ export default function Checklists() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      {card.is_rookie_card && (
+                      {card.is_rookie && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">
                           RC
                         </span>
