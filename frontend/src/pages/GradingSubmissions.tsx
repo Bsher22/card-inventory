@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Plus, Package, Calendar, DollarSign, 
+  Plus, Package, Calendar, 
   ChevronDown, ChevronRight, Award
 } from 'lucide-react';
 import { api } from '../api';
@@ -53,7 +53,7 @@ export default function GradingSubmissions() {
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['grading-submissions', filterCompany, filterStatus],
     queryFn: () => api.grading.getGradingSubmissions({
-      company_id: filterCompany || undefined,
+      grading_company_id: filterCompany || undefined,
       status: filterStatus || undefined,
     }),
   });
@@ -186,7 +186,7 @@ function SubmissionCard({
   const statusStyle = STATUS_STYLES[submission.status] || STATUS_STYLES.pending;
   const totalCards = submission.items?.length || 0;
   const gradedCards = submission.items?.filter(i => i.grade_received !== null).length || 0;
-  const totalCost = submission.total_fee + submission.shipping_cost;
+  const totalCost = (submission.total_fee || 0) + (submission.shipping_cost || 0);
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -253,11 +253,11 @@ function SubmissionCard({
             )}
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Grading Fee</p>
-              <p className="font-medium text-gray-900">{formatCurrency(submission.total_fee)}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(submission.total_fee || 0)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping</p>
-              <p className="font-medium text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(submission.shipping_cost || 0)}</p>
             </div>
           </div>
 

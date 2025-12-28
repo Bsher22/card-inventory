@@ -55,7 +55,7 @@ export default function Checklists() {
             <option value="">All Product Lines</option>
             {productLines?.map((pl) => (
               <option key={pl.id} value={pl.id}>
-                {pl.year} {pl.brand?.name} {pl.name}
+                {pl.year} {pl.brand_name} {pl.name}
               </option>
             ))}
           </select>

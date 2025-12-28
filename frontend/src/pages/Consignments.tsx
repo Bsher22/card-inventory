@@ -39,11 +39,6 @@ export default function Consignments() {
     queryFn: () => api.consignments.getConsigners(),
   });
 
-  const { data: pendingValue } = useQuery({
-    queryKey: ['pending-consignments-value'],
-    queryFn: () => api.consignments.getPendingValue(),
-  });
-
   const { data: consignments, isLoading } = useQuery({
     queryKey: ['consignments', filterConsigner, filterStatus],
     queryFn: () => api.consignments.getConsignments({
@@ -51,6 +46,11 @@ export default function Consignments() {
       status: filterStatus || undefined,
     }),
   });
+
+  // Calculate stats from consignments data
+  const pendingConsignments = consignments?.filter(c => c.status === 'pending') || [];
+  const totalPendingCards = pendingConsignments.reduce((sum, c) => sum + (c.items?.length || 0), 0);
+  const totalPendingFees = pendingConsignments.reduce((sum, c) => sum + (c.total_fee || 0), 0);
 
   return (
     <div className="p-8">
@@ -71,15 +71,15 @@ export default function Consignments() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Cards Out</p>
-          <p className="text-2xl font-bold text-gray-900">{pendingValue?.total_pending_cards || 0}</p>
+          <p className="text-2xl font-bold text-gray-900">{totalPendingCards}</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Active Consignments</p>
-          <p className="text-2xl font-bold text-gray-900">{pendingValue?.consignments_count || 0}</p>
+          <p className="text-2xl font-bold text-gray-900">{pendingConsignments.length}</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Pending Fees</p>
-          <p className="text-2xl font-bold text-amber-600">{formatCurrency(pendingValue?.total_pending_fees || 0)}</p>
+          <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPendingFees)}</p>
         </div>
       </div>
 
