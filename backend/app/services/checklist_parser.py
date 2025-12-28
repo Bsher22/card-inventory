@@ -22,13 +22,15 @@ from app.schemas import ChecklistUploadResult, ChecklistUploadPreview
 # Common column name mappings
 COLUMN_MAPPINGS = {
     # Card number variations
-    "card_number": ["card #", "card number", "number", "#", "card no", "no.", "card", "card#"],
+    "card_number": ["card_number", "card #", "card number", "number", "#", "card no", "no.", "card", "card#"],
     # Player name variations
-    "player_name": ["player", "player name", "name", "subject", "card name", "player/subject"],
+    "player_name": ["player_name", "player", "player name", "name", "subject", "card name", "player/subject"],
     # Team variations
     "team": ["team", "team name", "club", "franchise"],
+    # Set name variations
+    "set_name": ["set_name", "set", "set name", "subset", "insert"],
     # Parallel variations
-    "parallel": ["parallel", "version", "variation", "type", "card type", "insert"],
+    "parallel": ["parallel", "version", "variation", "type", "card type"],
     # Serial number variations
     "serial": ["serial", "print run", "numbered", "/", "serial #", "print run"],
     # Auto indicator variations
@@ -226,7 +228,16 @@ class ChecklistParser:
             # Try to use "Master" sheet if it exists, otherwise first sheet
             xl = pd.ExcelFile(BytesIO(file_content))
             if 'Master' in xl.sheet_names:
-                df = pd.read_excel(xl, sheet_name='Master')
+                # Beckett Master sheets have data starting from row 1 with no header
+                # Columns are: Set, Card#, Player, Team, Notes
+                df = pd.read_excel(xl, sheet_name='Master', header=None)
+                # Assign proper column names
+                if len(df.columns) >= 5:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes'][:len(df.columns)]
+                elif len(df.columns) == 4:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team']
+                else:
+                    df.columns = [f'col_{i}' for i in range(len(df.columns))]
             else:
                 df = pd.read_excel(xl, sheet_name=0)
         else:
@@ -234,7 +245,7 @@ class ChecklistParser:
         
         # Detect columns
         mapped_columns = detect_columns(df)
-        unmapped = [c for c in df.columns if c not in mapped_columns.values()]
+        unmapped = [str(c) for c in df.columns if c not in mapped_columns.values()]
         
         # Get sample rows
         sample_df = df.head(10).fillna("")
@@ -265,7 +276,16 @@ class ChecklistParser:
             # Try to use "Master" sheet if it exists, otherwise first sheet
             xl = pd.ExcelFile(BytesIO(file_content))
             if 'Master' in xl.sheet_names:
-                df = pd.read_excel(xl, sheet_name='Master')
+                # Beckett Master sheets have data starting from row 1 with no header
+                # Columns are: Set, Card#, Player, Team, Notes
+                df = pd.read_excel(xl, sheet_name='Master', header=None)
+                # Assign proper column names
+                if len(df.columns) >= 5:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes'][:len(df.columns)]
+                elif len(df.columns) == 4:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team']
+                else:
+                    df.columns = [f'col_{i}' for i in range(len(df.columns))]
             else:
                 df = pd.read_excel(xl, sheet_name=0)
         else:
@@ -313,6 +333,10 @@ class ChecklistParser:
                 team_col = col_map.get("team")
                 team = row.get(team_col) if team_col else None
                 
+                # Get set name (from Beckett format)
+                set_name_col = col_map.get("set_name")
+                set_name = str(row.get(set_name_col, "Base")).strip() if set_name_col and not pd.isna(row.get(set_name_col)) else "Base"
+                
                 # Get parallel
                 parallel_col = col_map.get("parallel")
                 parallel_name = str(row.get(parallel_col, "Base")).strip() if parallel_col else "Base"
@@ -345,6 +369,17 @@ class ChecklistParser:
                 notes_col = col_map.get("notes")
                 notes = str(row.get(notes_col)).strip() if notes_col and not pd.isna(row.get(notes_col)) else None
                 
+                # Check notes for RC indicator (Beckett format uses "RC" in notes column)
+                if not is_rookie and notes and "rc" in notes.lower():
+                    is_rookie = True
+                
+                # Check set_name for auto/relic indicators
+                set_name_lower = set_name.lower() if set_name else ""
+                if not is_auto and ("auto" in set_name_lower or "signature" in set_name_lower):
+                    is_auto = True
+                if not is_relic and ("relic" in set_name_lower or "memorabilia" in set_name_lower):
+                    is_relic = True
+                
                 # Find or create player
                 player_id = None
                 if player_name and not pd.isna(player_name):
@@ -359,12 +394,12 @@ class ChecklistParser:
                 # Detect card type
                 card_type_id = self._detect_card_type(parallel_name)
                 
-                # Check if card already exists
+                # Check if card already exists (unique by product_line + card_number + set_name)
                 existing = await self.db.execute(
                     select(Checklist).where(
                         Checklist.product_line_id == product_line_id,
                         Checklist.card_number == card_number,
-                        Checklist.parallel_name == parallel_name,
+                        Checklist.set_name == set_name,
                     )
                 )
                 existing_card = existing.scalar_one_or_none()
@@ -374,12 +409,13 @@ class ChecklistParser:
                     existing_card.player_id = player_id
                     existing_card.player_name_raw = str(player_name) if player_name else None
                     existing_card.card_type_id = card_type_id
+                    existing_card.set_name = set_name
+                    existing_card.parallel_name = parallel_name
                     existing_card.serial_numbered = serial_numbered
                     existing_card.is_autograph = is_auto
                     existing_card.is_relic = is_relic
                     existing_card.is_rookie_card = is_rookie
                     existing_card.team = str(team) if team and not pd.isna(team) else None
-                    existing_card.notes = notes
                     result.cards_updated += 1
                 else:
                     # Create new
@@ -389,13 +425,13 @@ class ChecklistParser:
                         player_id=player_id,
                         player_name_raw=str(player_name) if player_name else None,
                         card_type_id=card_type_id,
+                        set_name=set_name,
                         parallel_name=parallel_name,
                         serial_numbered=serial_numbered,
                         is_autograph=is_auto,
                         is_relic=is_relic,
                         is_rookie_card=is_rookie,
                         team=str(team) if team and not pd.isna(team) else None,
-                        notes=notes,
                     )
                     self.db.add(new_card)
                     result.cards_created += 1
