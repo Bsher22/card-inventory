@@ -1,8 +1,16 @@
 /**
- * eBay Sales Import API Client
+ * eBay API Client
+ * 
+ * Includes:
+ * - Listing generation (create eBay listings from inventory)
+ * - Sales import (import eBay sales reports)
  */
 import { API_BASE, handleResponse, apiRequest } from './base';
 import type {
+  // Listing Generation
+  EbayListingRequest,
+  EbayListingResponse,
+  // Sales Import
   EbayUploadPreviewResponse,
   EbayImportRequest,
   EbayImportResponse,
@@ -12,9 +20,25 @@ import type {
   EbaySalesAnalytics,
 } from '../types/ebay';
 
-const BASE_PATH = '/sales/ebay';
-
 export const ebayApi = {
+  // ============================================
+  // LISTING GENERATION
+  // ============================================
+  
+  /**
+   * Generate eBay listings from inventory items
+   */
+  async generateListings(request: EbayListingRequest): Promise<EbayListingResponse> {
+    return apiRequest<EbayListingResponse>('/ebay/generate-listings', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // ============================================
+  // SALES IMPORT
+  // ============================================
+  
   /**
    * Upload and preview eBay CSV file
    */
@@ -22,7 +46,7 @@ export const ebayApi = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch(`${API_BASE}${BASE_PATH}/upload/preview`, {
+    const response = await fetch(`${API_BASE}/sales/ebay/upload/preview`, {
       method: 'POST',
       body: formData,
     });
@@ -33,7 +57,7 @@ export const ebayApi = {
    * Import selected listings
    */
   async importListings(request: EbayImportRequest): Promise<EbayImportResponse> {
-    return apiRequest<EbayImportResponse>(`${BASE_PATH}/import`, {
+    return apiRequest<EbayImportResponse>('/sales/ebay/import', {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -51,7 +75,7 @@ export const ebayApi = {
     if (params?.limit !== undefined) queryParams.set('limit', params.limit.toString());
     
     const query = queryParams.toString();
-    const url = query ? `${BASE_PATH}/batches?${query}` : `${BASE_PATH}/batches`;
+    const url = query ? `/sales/ebay/batches?${query}` : `/sales/ebay/batches`;
     
     return apiRequest<EbayImportBatch[]>(url);
   },
@@ -60,14 +84,14 @@ export const ebayApi = {
    * Get single import batch with listings
    */
   async getBatch(batchId: string): Promise<EbayImportBatchDetail> {
-    return apiRequest<EbayImportBatchDetail>(`${BASE_PATH}/batches/${batchId}`);
+    return apiRequest<EbayImportBatchDetail>(`/sales/ebay/batches/${batchId}`);
   },
 
   /**
    * Delete an import batch
    */
   async deleteBatch(batchId: string): Promise<void> {
-    await apiRequest(`${BASE_PATH}/batches/${batchId}`, {
+    await apiRequest(`/sales/ebay/batches/${batchId}`, {
       method: 'DELETE',
     });
   },
@@ -88,7 +112,7 @@ export const ebayApi = {
     if (params?.limit !== undefined) queryParams.set('limit', params.limit.toString());
     
     const query = queryParams.toString();
-    const url = query ? `${BASE_PATH}/listings?${query}` : `${BASE_PATH}/listings`;
+    const url = query ? `/sales/ebay/listings?${query}` : `/sales/ebay/listings`;
     
     return apiRequest<EbayListingSale[]>(url);
   },
@@ -97,6 +121,6 @@ export const ebayApi = {
    * Get eBay sales analytics
    */
   async getAnalytics(): Promise<EbaySalesAnalytics> {
-    return apiRequest<EbaySalesAnalytics>(`${BASE_PATH}/analytics`);
+    return apiRequest<EbaySalesAnalytics>(`/sales/ebay/analytics`);
   },
 };

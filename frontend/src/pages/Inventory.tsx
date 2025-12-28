@@ -10,15 +10,11 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   Search,
   ChevronDown,
   Package,
-  Plus,
-  Filter,
-  BarChart3,
-  Tag,
   ShoppingCart,
   CheckSquare,
   Square,
@@ -29,7 +25,6 @@ import type { InventoryWithDetails, Brand, ProductLine } from '../types';
 
 export default function Inventory() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   
   // Filters
   const [search, setSearch] = useState('');
@@ -45,7 +40,7 @@ export default function Inventory() {
   // Fetch data
   const { data: inventory, isLoading } = useQuery({
     queryKey: ['inventory', { search, filterBrand, filterProductLine }],
-    queryFn: () => api.inventory.getAll({
+    queryFn: () => api.inventory.getInventory({
       search: search || undefined,
       brand_id: filterBrand || undefined,
       product_line_id: filterProductLine || undefined,
@@ -54,12 +49,12 @@ export default function Inventory() {
 
   const { data: brands } = useQuery({
     queryKey: ['brands'],
-    queryFn: () => api.brands.getAll(),
+    queryFn: () => api.products.getBrands(),
   });
 
   const { data: productLines } = useQuery({
     queryKey: ['product-lines', filterBrand],
-    queryFn: () => api.productLines.getAll({ brand_id: filterBrand || undefined }),
+    queryFn: () => api.products.getProductLines({ brand_id: filterBrand || undefined }),
     enabled: true,
   });
 
@@ -67,7 +62,7 @@ export default function Inventory() {
   const filteredInventory = useMemo(() => {
     if (!inventory) return [];
     
-    return inventory.filter((item) => {
+    return inventory.filter((item: InventoryWithDetails) => {
       if (filterSigned !== undefined && item.is_signed !== filterSigned) return false;
       if (filterSlabbed !== undefined && item.is_slabbed !== filterSlabbed) return false;
       return true;
@@ -89,7 +84,7 @@ export default function Inventory() {
     if (selectedIds.size === filteredInventory.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredInventory.map((item) => item.id)));
+      setSelectedIds(new Set(filteredInventory.map((item: InventoryWithDetails) => item.id)));
     }
   };
 
@@ -197,7 +192,7 @@ export default function Inventory() {
             className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Brands</option>
-            {brands?.map((brand) => (
+            {brands?.map((brand: Brand) => (
               <option key={brand.id} value={brand.id}>{brand.name}</option>
             ))}
           </select>
@@ -211,7 +206,7 @@ export default function Inventory() {
             className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Products</option>
-            {productLines?.map((pl) => (
+            {productLines?.map((pl: ProductLine) => (
               <option key={pl.id} value={pl.id}>{pl.year} {pl.name}</option>
             ))}
           </select>
@@ -292,7 +287,7 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredInventory.map((item) => (
+              {filteredInventory.map((item: InventoryWithDetails) => (
                 <tr
                   key={item.id}
                   className={`hover:bg-gray-50 transition-colors ${

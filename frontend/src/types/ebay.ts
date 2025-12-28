@@ -1,11 +1,79 @@
 /**
- * eBay Sales Import Types
+ * eBay Types
  * 
- * Types for handling eBay Listings & Sales Report imports
+ * Includes:
+ * - Listing Generation (for creating eBay listings from inventory)
+ * - Sales Import (for importing eBay sales reports)
  */
 
 // ============================================
-// Preview/Upload Types
+// LISTING GENERATION TYPES
+// ============================================
+
+export interface EbayItemSpecifics {
+  type: string;
+  sport: string;
+  league: string;
+  manufacturer: string;
+  set: string;
+  season: string;
+  player_athlete: string;
+  team?: string;
+  card_number?: string;
+  card_condition: string;
+  
+  // Conditional fields
+  autographed?: string;
+  autograph_authentication?: string;
+  autograph_format?: string;
+  signed_by?: string;
+  
+  parallel_variety?: string;
+  features?: string;
+  serial_numbered?: string;
+}
+
+export interface EbayListingData {
+  inventory_id: string;
+  title: string;
+  
+  min_price: number;
+  cost_basis: number;
+  quantity: number;
+  per_unit_cost: number;
+  
+  item_specifics: EbayItemSpecifics;
+  
+  player_name: string;
+  card_number: string;
+  year: number;
+  product_name: string;
+  parallel_name?: string;
+  serial_numbered?: number;
+  serial_number?: number;
+  
+  is_signed: boolean;
+  is_slabbed: boolean;
+  is_first_bowman: boolean;
+  is_rookie: boolean;
+  
+  grade_company?: string;
+  grade_value?: number;
+  auth_company?: string;
+}
+
+export interface EbayListingRequest {
+  inventory_ids: string[];
+}
+
+export interface EbayListingResponse {
+  listings: EbayListingData[];
+  total_count: number;
+  total_min_price: number;
+}
+
+// ============================================
+// SALES IMPORT TYPES
 // ============================================
 
 export interface EbayListingPreview {
@@ -70,10 +138,6 @@ export interface EbayUploadPreviewResponse {
   warnings: string[];
 }
 
-// ============================================
-// Import/Create Types
-// ============================================
-
 export interface EbayListingCreate {
   listing_title: string;
   ebay_item_id: string;
@@ -123,10 +187,6 @@ export interface EbayImportResponse {
   total_net_sales: number;
 }
 
-// ============================================
-// Read/List Types
-// ============================================
-
 export interface EbayListingSale {
   id: string;
   import_batch_id: string;
@@ -174,10 +234,6 @@ export interface EbayImportBatch {
 export interface EbayImportBatchDetail extends EbayImportBatch {
   listing_sales: EbayListingSale[];
 }
-
-// ============================================
-// Analytics Types
-// ============================================
 
 export interface EbaySalesAnalytics {
   total_batches: number;
