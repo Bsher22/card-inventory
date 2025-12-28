@@ -53,7 +53,7 @@ export default function GradingSubmissions() {
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['grading-submissions', filterCompany, filterStatus],
     queryFn: () => api.grading.getGradingSubmissions({
-      grading_company_id: filterCompany || undefined,
+      grading_company_id: filterCompany || undefined,  // FIXED: was company_id
       status: filterStatus || undefined,
     }),
   });
@@ -73,24 +73,24 @@ export default function GradingSubmissions() {
         </button>
       </div>
 
-      {/* Summary Stats */}
+      {/* Summary Stats - FIXED: use correct field names */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Cards Out</p>
-          <p className="text-2xl font-bold text-gray-900">{stats?.pending_cards || 0}</p>
-          <p className="text-xs text-gray-500">{stats?.total_submissions || 0} submissions</p>
+          <p className="text-2xl font-bold text-gray-900">{stats?.cards_out_for_grading || 0}</p>
+          <p className="text-xs text-gray-500">{stats?.pending_submissions || 0} submissions</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Pending Fees</p>
-          <p className="text-2xl font-bold text-amber-600">{formatCurrency(stats?.total_fees || 0)}</p>
+          <p className="text-2xl font-bold text-amber-600">{formatCurrency(stats?.pending_fees || 0)}</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Cards Graded</p>
-          <p className="text-2xl font-bold text-green-600">{stats?.total_cards_graded || 0}</p>
+          <p className="text-2xl font-bold text-green-600">{stats?.total_graded || 0}</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
-          <p className="text-sm text-gray-500">Average Grade</p>
-          <p className="text-2xl font-bold text-blue-600">{stats?.average_grade?.toFixed(1) || '-'}</p>
+          <p className="text-sm text-gray-500">Gem Rate</p>
+          <p className="text-2xl font-bold text-blue-600">{stats?.gem_rate?.toFixed(1) || '-'}%</p>
         </div>
       </div>
 
@@ -184,9 +184,10 @@ function SubmissionCard({
   onToggle: () => void;
 }) {
   const statusStyle = STATUS_STYLES[submission.status] || STATUS_STYLES.pending;
-  const totalCards = submission.items?.length || 0;
-  const gradedCards = submission.items?.filter(i => i.grade_received !== null).length || 0;
-  const totalCost = (submission.total_fee || 0) + (submission.shipping_cost || 0);
+  const totalCards = submission.total_cards || submission.items?.length || 0;
+  const gradedCards = submission.cards_graded || submission.items?.filter(i => i.grade_value !== null).length || 0;
+  // FIXED: use grading_fee instead of total_fee, and shipping_to_cost instead of shipping_cost
+  const totalCost = (submission.grading_fee || 0) + (submission.shipping_to_cost || 0);
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -204,7 +205,7 @@ function SubmissionCard({
             <div>
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-gray-900">
-                  {submission.company?.short_name || submission.company?.name || 'Unknown'}
+                  {submission.company?.code || submission.company?.name || 'Unknown'}
                 </h3>
                 {submission.submission_number && (
                   <span className="text-sm text-gray-500">#{submission.submission_number}</span>
@@ -253,11 +254,11 @@ function SubmissionCard({
             )}
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Grading Fee</p>
-              <p className="font-medium text-gray-900">{formatCurrency(submission.total_fee || 0)}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(submission.grading_fee || 0)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping</p>
-              <p className="font-medium text-gray-900">{formatCurrency(submission.shipping_cost || 0)}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(submission.shipping_to_cost || 0)}</p>
             </div>
           </div>
 
@@ -267,7 +268,7 @@ function SubmissionCard({
             </p>
           )}
 
-          {/* Items Table */}
+          {/* Items Table - FIXED: use grade_value instead of grade_received */}
           <h4 className="font-medium text-gray-900 mb-3">Items ({submission.items?.length || 0})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
@@ -286,18 +287,18 @@ function SubmissionCard({
                       {item.checklist?.player?.name || item.checklist?.player_name_raw || 'Unknown'}
                     </td>
                     <td className="px-3 py-2 text-center text-gray-600">
-                      {formatCurrency(item.declared_value)}
+                      {formatCurrency(item.declared_value || 0)}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {item.grade_received !== null ? (
+                      {item.grade_value !== null ? (
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                          item.grade_received >= 9 ? 'bg-green-100 text-green-700' :
-                          item.grade_received >= 7 ? 'bg-blue-100 text-blue-700' :
+                          item.grade_value >= 9 ? 'bg-green-100 text-green-700' :
+                          item.grade_value >= 7 ? 'bg-blue-100 text-blue-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
                           <Award size={12} />
-                          {item.grade_received}
-                          {item.auto_grade_received && ` / ${item.auto_grade_received}`}
+                          {item.grade_value}
+                          {item.auto_grade && ` / ${item.auto_grade}`}
                         </span>
                       ) : (
                         <span className="text-gray-400">Pending</span>

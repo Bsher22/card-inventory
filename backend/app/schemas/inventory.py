@@ -85,7 +85,8 @@ InventoryWithCard = InventoryWithDetails
 
 class InventoryAdjust(BaseModel):
     """Adjustment to inventory quantity"""
-    quantity_change: int  # Can be positive or negative
+    # FIXED: Changed from quantity_change to adjustment to match frontend
+    adjustment: int  # Can be positive or negative
     reason: Optional[str] = None
     notes: Optional[str] = None
 

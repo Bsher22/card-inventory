@@ -1,5 +1,5 @@
 /**
- * Consignment Types - Aligned with Backend Schemas
+ * Consignment Types - FIXED to match Backend Schemas
  */
 
 import type { Checklist } from './checklists';
@@ -13,40 +13,44 @@ export interface Consigner {
   name: string;
   email: string | null;
   phone: string | null;
-  default_fee_per_card: number;
+  location: string | null;  // FIXED: added
+  default_fee: number | null;  // FIXED: was default_fee_per_card
   payment_method: string | null;
+  payment_details: string | null;  // FIXED: added
   notes: string | null;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface ConsignerCreate {
   name: string;
   email?: string | null;
   phone?: string | null;
-  default_fee_per_card?: number;
+  location?: string | null;
+  default_fee?: number | null;  // FIXED: was default_fee_per_card
   payment_method?: string | null;
+  payment_details?: string | null;
   notes?: string | null;
-  is_active?: boolean;
 }
 
 export interface ConsignerUpdate {
   name?: string;
   email?: string | null;
   phone?: string | null;
-  default_fee_per_card?: number;
+  location?: string | null;
+  default_fee?: number | null;  // FIXED: was default_fee_per_card
   payment_method?: string | null;
-  notes?: string | null;
+  payment_details?: string | null;
   is_active?: boolean;
+  notes?: string | null;
 }
 
 export interface ConsignerStats {
   total_consignments: number;
   total_cards_sent: number;
-  total_cards_returned: number;
+  cards_signed: number;  // FIXED: was total_cards_returned
+  cards_refused: number;  // FIXED: added
+  cards_pending: number;  // FIXED: was pending_cards
   total_fees_paid: number;
-  pending_cards: number;
   success_rate: number;
 }
 
@@ -56,19 +60,27 @@ export interface ConsignerStats {
 
 export interface ConsignmentItem {
   id: string;
-  consignment_id: string;
   checklist_id: string;
   quantity: number;
   fee_per_card: number;
   status: string;
-  notes: string | null;
+  date_signed: string | null;  // FIXED: added
+  inscription: string | null;  // FIXED: added
   checklist?: Checklist;
 }
 
 export interface ConsignmentItemCreate {
   checklist_id: string;
   quantity?: number;
-  fee_per_card?: number;
+  fee_per_card?: number | null;
+  source_inventory_id?: string | null;  // FIXED: added
+}
+
+export interface ConsignmentItemResult {
+  item_id: string;
+  status: string;  // 'signed', 'refused', 'lost', 'returned_unsigned'
+  inscription?: string | null;
+  date_signed?: string | null;
   notes?: string | null;
 }
 
@@ -79,14 +91,14 @@ export interface ConsignmentItemCreate {
 export interface Consignment {
   id: string;
   consigner_id: string;
+  reference_number: string | null;  // FIXED: added
   date_sent: string;
   date_returned: string | null;
+  expected_return_date: string | null;  // FIXED: added
   status: string;
-  total_cards: number;
   total_fee: number;
+  fee_paid: boolean;  // FIXED: added
   notes: string | null;
-  created_at: string;
-  updated_at: string;
   consigner?: Consigner;
   items?: ConsignmentItem[];
 }
@@ -94,17 +106,19 @@ export interface Consignment {
 export interface ConsignmentCreate {
   consigner_id: string;
   date_sent: string;
-  notes?: string | null;
   items: ConsignmentItemCreate[];
+  reference_number?: string | null;
+  expected_return_date?: string | null;
+  shipping_out_cost?: number;
+  shipping_out_tracking?: string | null;
+  notes?: string | null;
 }
 
 export interface ConsignmentReturn {
-  date_returned: string;
-  items: {
-    item_id: string;
-    status: string;
-    notes?: string;
-  }[];
+  item_results: ConsignmentItemResult[];
+  date_returned?: string | null;
+  shipping_return_cost?: number;
+  shipping_return_tracking?: string | null;
 }
 
 export interface PendingConsignmentsValue {

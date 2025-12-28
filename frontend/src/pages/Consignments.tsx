@@ -157,7 +157,7 @@ function ConsignmentCard({
   onToggle: () => void;
 }) {
   const statusStyle = STATUS_STYLES[consignment.status] || STATUS_STYLES.pending;
-  const totalCards = consignment.items?.length || 0;
+  const totalCards = consignment.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
   const signedCards = consignment.items?.filter(i => i.status === 'signed').length || 0;
 
   return (
@@ -181,6 +181,12 @@ function ConsignmentCard({
                 <span className={`px-2 py-0.5 rounded text-xs ${statusStyle.bg} ${statusStyle.text}`}>
                   {statusStyle.label}
                 </span>
+                {/* FIXED: Show fee_paid status */}
+                {consignment.fee_paid && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">
+                    Paid
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
@@ -191,6 +197,10 @@ function ConsignmentCard({
                   <Package size={14} />
                   {totalCards} cards
                 </span>
+                {/* FIXED: Show reference number if available */}
+                {consignment.reference_number && (
+                  <span>#{consignment.reference_number}</span>
+                )}
               </div>
             </div>
           </div>
@@ -209,6 +219,13 @@ function ConsignmentCard({
       {/* Expanded Content */}
       {isExpanded && (
         <div className="border-t border-gray-100 p-6">
+          {/* FIXED: Show expected return date if available */}
+          {consignment.expected_return_date && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+              Expected return: {formatDate(consignment.expected_return_date)}
+            </div>
+          )}
+
           {consignment.notes && (
             <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-lg">
               {consignment.notes}
@@ -223,6 +240,7 @@ function ConsignmentCard({
                 <tr className="bg-gray-100 text-left text-gray-600">
                   <th className="px-3 py-2 font-medium">Card</th>
                   <th className="px-3 py-2 font-medium text-center">Status</th>
+                  <th className="px-3 py-2 font-medium text-center">Inscription</th>
                   <th className="px-3 py-2 font-medium text-right">Fee</th>
                 </tr>
               </thead>
@@ -236,12 +254,16 @@ function ConsignmentCard({
                       <span className={`px-2 py-0.5 rounded text-xs ${
                         item.status === 'signed' 
                           ? 'bg-green-100 text-green-700'
-                          : item.status === 'unsigned'
+                          : item.status === 'refused'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-gray-100 text-gray-600'
                       }`}>
                         {item.status}
                       </span>
+                    </td>
+                    {/* FIXED: Show inscription if available */}
+                    <td className="px-3 py-2 text-center text-gray-600">
+                      {item.inscription || '-'}
                     </td>
                     <td className="px-3 py-2 text-right text-gray-600">
                       {formatCurrency(item.fee_per_card * item.quantity)}

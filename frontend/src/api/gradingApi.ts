@@ -1,5 +1,5 @@
 /**
- * Grading API Client
+ * Grading API Client - FIXED to match backend endpoints
  */
 
 import { apiRequest, buildQueryString } from './base';
@@ -9,6 +9,7 @@ import type {
   GradingSubmission,
   GradingSubmissionCreate,
   SubmissionGradeResults,
+  SubmissionStatusUpdate,
   GradingStats,
   PendingByCompany,
 } from '../types';
@@ -32,7 +33,7 @@ export async function getServiceLevels(companyId: string, activeOnly = true): Pr
 // ============================================
 
 export async function getGradingSubmissions(params?: {
-  grading_company_id?: string;
+  grading_company_id?: string;  // FIXED: was company_id
   status?: string;
   skip?: number;
   limit?: number;
@@ -62,13 +63,7 @@ export async function createGradingSubmission(data: GradingSubmissionCreate): Pr
 
 export async function updateSubmissionStatus(
   id: string,
-  data: {
-    status: string;
-    date_received?: string;
-    date_graded?: string;
-    date_shipped_back?: string;
-    shipping_return_tracking?: string;
-  }
+  data: SubmissionStatusUpdate
 ): Promise<GradingSubmission> {
   return apiRequest<GradingSubmission>(`/grading/submissions/${id}/status`, {
     method: 'PATCH',
