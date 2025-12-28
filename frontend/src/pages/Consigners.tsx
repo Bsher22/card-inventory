@@ -161,10 +161,10 @@ function ConsignerCard({
             </p>
           )}
           {/* FIXED: Changed from default_fee_per_card to default_fee */}
-          {consigner.default_fee > 0 && (
+          {(consigner.default_fee ?? 0) > 0 && (
             <p className="text-sm text-gray-600 flex items-center gap-2">
               <DollarSign size={14} className="text-gray-400" />
-              {formatCurrency(consigner.default_fee)} per card
+              {formatCurrency(consigner.default_fee ?? 0)} per card
             </p>
           )}
         </div>
