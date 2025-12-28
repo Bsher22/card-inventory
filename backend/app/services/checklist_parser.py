@@ -165,8 +165,8 @@ class ChecklistParser:
         if not name or pd.isna(name):
             return None, False
         
-        name = str(name).strip()
-        normalized = normalize_player_name(name)
+        name = str(name).strip()[:400]  # Truncate to fit database constraint
+        normalized = normalize_player_name(name)[:400]  # Also truncate normalized
         
         # Check cache first
         if normalized in self._player_cache:
@@ -186,7 +186,7 @@ class ChecklistParser:
         new_player = Player(
             name=name,
             name_normalized=normalized,
-            team=team if not pd.isna(team) else None,
+            team=str(team)[:100] if team and not pd.isna(team) else None,  # Truncate team too
         )
         self.db.add(new_player)
         await self.db.flush()
@@ -418,6 +418,7 @@ class ChecklistParser:
                 
                 # Find or create player
                 player_id = None
+                player_name_truncated = str(player_name)[:400] if player_name and not pd.isna(player_name) else None
                 if player_name and not pd.isna(player_name):
                     player_id, was_created = await self._find_or_create_player(
                         player_name, team
@@ -437,7 +438,7 @@ class ChecklistParser:
                         Checklist.product_line_id == product_line_id,
                         Checklist.card_number == card_number,
                         Checklist.set_name == set_name,
-                        Checklist.player_name_raw == (str(player_name) if player_name else None),
+                        Checklist.player_name_raw == player_name_truncated,
                     )
                 )
                 existing_card = existing.scalar_one_or_none()
@@ -451,23 +452,23 @@ class ChecklistParser:
                     existing_card.is_autograph = is_auto
                     existing_card.is_relic = is_relic
                     existing_card.is_rookie_card = is_rookie
-                    existing_card.team = str(team) if team and not pd.isna(team) else None
+                    existing_card.team = str(team)[:100] if team and not pd.isna(team) else None
                     result.cards_updated += 1
                 else:
                     # Create new
                     new_card = Checklist(
                         product_line_id=product_line_id,
-                        card_number=card_number,
+                        card_number=card_number[:50],  # Truncate card number
                         player_id=player_id,
-                        player_name_raw=str(player_name) if player_name else None,
+                        player_name_raw=player_name_truncated,
                         card_type_id=card_type_id,
-                        set_name=set_name,
-                        parallel_name=parallel_name,
+                        set_name=set_name[:100] if set_name else None,
+                        parallel_name=parallel_name[:100] if parallel_name else None,
                         serial_numbered=serial_numbered,
                         is_autograph=is_auto,
                         is_relic=is_relic,
                         is_rookie_card=is_rookie,
-                        team=str(team) if team and not pd.isna(team) else None,
+                        team=str(team)[:100] if team and not pd.isna(team) else None,
                     )
                     self.db.add(new_card)
                     result.cards_created += 1
