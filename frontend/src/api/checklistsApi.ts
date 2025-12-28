@@ -46,11 +46,13 @@ export async function previewChecklistUpload(file: File): Promise<ChecklistUploa
 export async function uploadChecklist(
   file: File,
   productLineId: string,
-  columnMapping?: Record<string, string>
+  columnMapping?: Record<string, string>,
+  prospectsOnly: boolean = true  // Default to only importing prospects
 ): Promise<ChecklistUploadResult> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('product_line_id', productLineId);
+  formData.append('prospects_only', String(prospectsOnly));
   if (columnMapping) {
     formData.append('column_mapping', JSON.stringify(columnMapping));
   }

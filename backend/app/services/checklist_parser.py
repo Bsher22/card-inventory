@@ -247,16 +247,24 @@ class ChecklistParser:
         mapped_columns = detect_columns(df)
         unmapped = [str(c) for c in df.columns if c not in mapped_columns.values()]
         
-        # Get sample rows
-        sample_df = df.head(10).fillna("")
+        # Filter for prospects only (for preview)
+        total_all = len(df)
+        if 'set_name' in df.columns:
+            prospects_df = df[df['set_name'].astype(str).str.lower().str.contains('prospect', na=False)]
+        else:
+            prospects_df = df
+        
+        # Get sample rows from prospects only
+        sample_df = prospects_df.head(10).fillna("")
         sample_rows = sample_df.to_dict('records')
         
         return ChecklistUploadPreview(
             filename=filename,
-            total_rows=len(df),
+            total_rows=len(prospects_df),  # Show prospect count, not total
             sample_rows=sample_rows,
             detected_columns=mapped_columns,
             unmapped_columns=unmapped,
+            detected_product=f"{total_all} total rows, {len(prospects_df)} prospects",
         )
     
     async def import_checklist(
@@ -265,6 +273,7 @@ class ChecklistParser:
         filename: str,
         product_line_id: UUID,
         column_mapping: Optional[dict[str, str]] = None,
+        prospects_only: bool = True,  # Default to only importing prospects
     ) -> ChecklistUploadResult:
         """
         Import a checklist file into the database.
@@ -291,6 +300,12 @@ class ChecklistParser:
         else:
             raise ValueError(f"Unsupported file type: {filename}")
         
+        # Filter for prospects only if requested
+        total_before_filter = len(df)
+        if prospects_only and 'set_name' in df.columns:
+            # Keep rows where set_name contains "prospect" (case insensitive)
+            df = df[df['set_name'].astype(str).str.lower().str.contains('prospect', na=False)]
+        
         # Load caches
         await self._load_player_cache()
         await self._load_card_type_cache()
@@ -312,6 +327,7 @@ class ChecklistParser:
             players_created=0,
             players_matched=0,
             errors=[],
+            skipped=total_before_filter - len(df) if prospects_only else 0,
         )
         
         # Process each row

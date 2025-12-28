@@ -244,6 +244,7 @@ async def upload_checklist(
     file: UploadFile = File(...),
     product_line_id: UUID = Form(...),
     column_mapping: Optional[str] = Form(None),  # JSON string
+    prospects_only: bool = Form(True),  # Default to only importing prospects
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -279,6 +280,7 @@ async def upload_checklist(
             file.filename, 
             product_line_id,
             mapping,
+            prospects_only=prospects_only,
         )
         return result
     except ValueError as e:
