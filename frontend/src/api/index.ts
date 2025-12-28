@@ -47,6 +47,10 @@ export { beckettApi } from './beckettApi';
 export * from './cardTypesApi';
 export { cardTypesApi } from './cardTypesApi';
 
+// eBay API
+export * from './ebayApi';
+export { ebayApi } from './ebayApi';
+
 // ============================================
 // UNIFIED API OBJECT (Optional)
 // ============================================
@@ -60,6 +64,7 @@ import { gradingApi } from './gradingApi';
 import { financialApi } from './financialApi';
 import { beckettApi } from './beckettApi';
 import { cardTypesApi } from './cardTypesApi';
+import { ebayApi } from './ebayApi';
 
 /**
  * Unified API client with all domain APIs
@@ -79,6 +84,7 @@ export const api = {
   financial: financialApi,
   beckett: beckettApi,
   cardTypes: cardTypesApi,
+  ebay: ebayApi,
 };
 
 export default api;

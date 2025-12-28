@@ -11,6 +11,7 @@ import {
   Users,
   Send,
   Award,
+  Store,
 } from 'lucide-react';
 
 // Auth
@@ -30,6 +31,7 @@ import ChecklistUpload from './pages/ChecklistUpload';
 import Consigners from './pages/Consigners';
 import Consignments from './pages/Consignments';
 import GradingSubmissions from './pages/GradingSubmissions';
+import EbayImport from './pages/EbayImport';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +53,7 @@ const navItems = [
   { to: '/grading', icon: Award, label: 'PSA Submissions' },
   { to: '/purchases', icon: ShoppingCart, label: 'Purchases' },
   { to: '/sales', icon: DollarSign, label: 'Sales' },
+  { to: '/sales/ebay-import', icon: Store, label: 'eBay Import' },
 ];
 
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -203,6 +206,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Sales />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sales/ebay-import"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EbayImport />
                   </AppLayout>
                 </ProtectedRoute>
               }

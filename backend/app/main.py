@@ -22,6 +22,7 @@ from app.routes import (
     beckett_router,
     card_types_router,
 )
+from app.routes.ebay_routes import router as ebay_router
 
 settings = get_settings()
 
@@ -64,6 +65,7 @@ app.include_router(inventory_router, prefix="/api", tags=["Inventory"])
 app.include_router(financial_router, prefix="/api", tags=["Purchases & Sales"])
 app.include_router(consignments_router, prefix="/api", tags=["Consignments"])
 app.include_router(grading_router, prefix="/api", tags=["Grading Submissions"])
+app.include_router(ebay_router, prefix="/api", tags=["eBay Sales Import"])
 app.include_router(beckett_router)  # Beckett Import (has own /api/beckett prefix)
 app.include_router(card_types_router)  # Card Types, Parallels & PDF Parsing
 
