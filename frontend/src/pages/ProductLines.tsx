@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Package, Trash2, ChevronDown } from 'lucide-react';
 import { api } from '../api';
-import type { Brand, ProductLineSummary, ProductLineCreate } from '../types';
+import type { Brand, ProductLineCreate } from '../types';
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
@@ -107,7 +107,7 @@ export default function ProductLines() {
                     <Package className="text-blue-600" size={20} />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">{pl.brand_name}</p>
+                    <p className="text-sm text-gray-500">{pl.brand?.name || pl.brand_name}</p>
                     <h3 className="font-semibold text-gray-900">{pl.name}</h3>
                     <p className="text-sm text-gray-500">{pl.year}</p>
                   </div>

@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { 
-  Plus, Award, Calendar, DollarSign, Truck, 
-  ChevronDown, ChevronRight,
-  Star, BarChart3
+  Plus, Package, Calendar, DollarSign, 
+  ChevronDown, ChevronRight, Award
 } from 'lucide-react';
 import { api } from '../api';
-import type { GradingSubmission, GradingStats, PendingByCompany } from '../types';
+import type { GradingSubmission } from '../types';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -23,18 +22,15 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  preparing: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Preparing' },
-  shipped: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Shipped' },
-  received: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Received' },
-  grading: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Grading' },
-  shipped_back: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Shipped Back' },
-  complete: { bg: 'bg-green-100', text: 'text-green-700', label: 'Complete' },
-  cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled' },
+const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
+  pending: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  shipped: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  received: { bg: 'bg-purple-100', text: 'text-purple-700' },
+  graded: { bg: 'bg-green-100', text: 'text-green-700' },
+  returned: { bg: 'bg-gray-100', text: 'text-gray-700' },
 };
 
 export default function GradingSubmissions() {
-  const queryClient = useQueryClient();
   const [filterCompany, setFilterCompany] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -57,7 +53,7 @@ export default function GradingSubmissions() {
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['grading-submissions', filterCompany, filterStatus],
     queryFn: () => api.grading.getGradingSubmissions({
-      grading_company_id: filterCompany || undefined,
+      company_id: filterCompany || undefined,
       status: filterStatus || undefined,
     }),
   });
@@ -77,84 +73,38 @@ export default function GradingSubmissions() {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 text-purple-700 mb-1">
-              <Award size={18} />
-              <span className="font-medium">Cards Out</span>
-            </div>
-            <p className="text-2xl font-bold text-purple-900">{stats.pending_cards}</p>
-            <p className="text-sm text-purple-600">{stats.total_submissions} submissions</p>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 text-blue-700 mb-1">
-              <DollarSign size={18} />
-              <span className="font-medium">Pending Fees</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.pending_fees)}</p>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 text-amber-700 mb-1">
-              <BarChart3 size={18} />
-              <span className="font-medium">Total Graded</span>
-            </div>
-            <p className="text-2xl font-bold text-amber-900">{stats.total_cards_graded}</p>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 text-green-700 mb-1">
-              <Star size={18} />
-              <span className="font-medium">Gem Rate</span>
-            </div>
-            <p className="text-2xl font-bold text-green-900">{stats.average_grade}%</p>
-            <p className="text-sm text-green-600">PSA 10 / BGS 10</p>
-          </div>
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white border border-gray-100 rounded-xl p-4">
+          <p className="text-sm text-gray-500">Cards Out</p>
+          <p className="text-2xl font-bold text-gray-900">{stats?.pending_cards || 0}</p>
+          <p className="text-xs text-gray-500">{stats?.total_submissions || 0} submissions</p>
         </div>
-      )}
+        <div className="bg-white border border-gray-100 rounded-xl p-4">
+          <p className="text-sm text-gray-500">Pending Fees</p>
+          <p className="text-2xl font-bold text-amber-600">{formatCurrency(stats?.total_fees || 0)}</p>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-xl p-4">
+          <p className="text-sm text-gray-500">Cards Graded</p>
+          <p className="text-2xl font-bold text-green-600">{stats?.total_cards_graded || 0}</p>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-xl p-4">
+          <p className="text-sm text-gray-500">Average Grade</p>
+          <p className="text-2xl font-bold text-blue-600">{stats?.average_grade?.toFixed(1) || '-'}</p>
+        </div>
+      </div>
 
       {/* Pending by Company */}
       {pendingByCompany && pendingByCompany.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+        <div className="bg-white border border-gray-100 rounded-xl p-4 mb-6">
           <h3 className="font-medium text-gray-900 mb-3">Pending by Company</h3>
           <div className="flex flex-wrap gap-3">
-            {pendingByCompany.map((company) => (
-              <div key={company.code} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                <span className="font-bold text-gray-900">{company.code}</span>
-                <span className="text-gray-500">{company.cards_out} cards</span>
-                <span className="text-gray-400">({company.total_submissions} subs)</span>
+            {pendingByCompany.map((pending) => (
+              <div key={pending.company_id} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                <span className="font-medium text-gray-900">{pending.company_name}</span>
+                <span className="text-sm text-gray-500">{pending.pending_cards} cards</span>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Grade Distribution */}
-      {stats && Object.keys(stats.total_fees).length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-          <h3 className="font-medium text-gray-900 mb-3">Grade Distribution</h3>
-          <div className="flex items-end gap-1 h-24">
-            {['10', '9.5', '9', '8.5', '8', '7', '6', '5', '4', '3', '2', '1'].map((grade) => {
-              const count = stats.total_fees[grade] || 0;
-              const maxCount = Math.max(...Object.values(stats.total_fees));
-              const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
-              
-              return (
-                <div key={grade} className="flex-1 flex flex-col items-center">
-                  <div 
-                    className={`w-full rounded-t transition-all ${
-                      grade === '10' ? 'bg-green-500' :
-                      parseFloat(grade) >= 9 ? 'bg-blue-500' :
-                      parseFloat(grade) >= 7 ? 'bg-amber-500' :
-                      'bg-gray-400'
-                    }`}
-                    style={{ height: `${height}%`, minHeight: count > 0 ? '4px' : '0' }}
-                    title={`${grade}: ${count}`}
-                  />
-                  <span className="text-xs text-gray-500 mt-1">{grade}</span>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}
@@ -182,12 +132,11 @@ export default function GradingSubmissions() {
             className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Statuses</option>
-            <option value="preparing">Preparing</option>
+            <option value="pending">Pending</option>
             <option value="shipped">Shipped</option>
             <option value="received">Received</option>
-            <option value="grading">Grading</option>
-            <option value="shipped_back">Shipped Back</option>
-            <option value="complete">Complete</option>
+            <option value="graded">Graded</option>
+            <option value="returned">Returned</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
         </div>
@@ -234,11 +183,10 @@ function SubmissionCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const status = STATUS_STYLES[submission.status] || STATUS_STYLES.preparing;
-  const totalCards = (submission.items?.length ?? 0);
-  const gradedCards = submission.items?.filter(i => i.grade_received !== null).length;
-  const totalFees = submission.total_fee + submission.shipping_cost + 
-    submission.shipping_cost + submission.shipping_cost;
+  const statusStyle = STATUS_STYLES[submission.status] || STATUS_STYLES.pending;
+  const totalCards = submission.items?.length || 0;
+  const gradedCards = submission.items?.filter(i => i.grade_received !== null).length || 0;
+  const totalCost = submission.total_fee + submission.shipping_cost;
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -250,175 +198,112 @@ function SubmissionCard({
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              {isExpanded ? <ChevronDown className="text-purple-600" size={20} /> : <ChevronRight className="text-purple-600" size={20} />}
+            <div className="p-2 bg-blue-100 rounded-lg">
+              {isExpanded ? <ChevronDown className="text-blue-600" size={20} /> : <ChevronRight className="text-blue-600" size={20} />}
             </div>
             <div>
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-gray-900">
-                  {submission.company?.name || 'Unknown Company'}
+                  {submission.company?.short_name || submission.company?.name || 'Unknown'}
                 </h3>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.bg} ${status.text}`}>
-                  {status.label}
-                </span>
                 {submission.submission_number && (
                   <span className="text-sm text-gray-500">#{submission.submission_number}</span>
                 )}
+                <span className={`px-2 py-0.5 rounded text-xs ${statusStyle.bg} ${statusStyle.text}`}>
+                  {submission.status}
+                </span>
               </div>
               <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <Calendar size={14} />
-                  Submitted {formatDate(submission.date_submitted)}
+                  {formatDate(submission.date_submitted)}
                 </span>
-                <span>{totalCards} cards</span>
-                {submission.service_level?.name && (
-                  <span className="text-purple-600">{submission.service_level.name}</span>
-                )}
+                <span className="flex items-center gap-1">
+                  <Package size={14} />
+                  {totalCards} cards
+                </span>
               </div>
             </div>
           </div>
 
           <div className="text-right">
-            <p className="text-xl font-bold text-gray-900">{formatCurrency(totalFees)}</p>
-            {gradedCards > 0 && (
-              <p className="text-sm text-green-600">{gradedCards}/{totalCards} graded</p>
-            )}
+            <p className="text-xl font-bold text-gray-900">
+              {formatCurrency(totalCost)}
+            </p>
+            <p className="text-sm text-gray-500">
+              {gradedCards}/{totalCards} graded
+            </p>
           </div>
-        </div>
-
-        {/* Timeline */}
-        <div className="mt-4 flex items-center gap-2">
-          <TimelineStep 
-            label="Submitted" 
-            date={submission.date_submitted}
-            isComplete={true}
-          />
-          <div className="flex-1 h-0.5 bg-gray-200" />
-          <TimelineStep 
-            label="Shipped" 
-            date={submission.date_submitted}
-            isComplete={!!submission.date_submitted}
-          />
-          <div className="flex-1 h-0.5 bg-gray-200" />
-          <TimelineStep 
-            label="Received" 
-            date={submission.date_returned}
-            isComplete={!!submission.date_returned}
-          />
-          <div className="flex-1 h-0.5 bg-gray-200" />
-          <TimelineStep 
-            label="Graded" 
-            date={submission.date_returned}
-            isComplete={!!submission.date_returned}
-          />
-          <div className="flex-1 h-0.5 bg-gray-200" />
-          <TimelineStep 
-            label="Returned" 
-            date={submission.date_returned}
-            isComplete={!!submission.date_returned}
-          />
         </div>
       </div>
 
       {/* Expanded Content */}
       {isExpanded && (
         <div className="border-t border-gray-100 p-6">
-          {/* Financial Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-500">Submitted</p>
+              <p className="font-medium text-gray-900">{formatDate(submission.date_submitted)}</p>
+            </div>
+            {submission.date_returned && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Returned</p>
+                <p className="font-medium text-gray-900">{formatDate(submission.date_returned)}</p>
+              </div>
+            )}
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Grading Fee</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.total_fee)}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(submission.total_fee)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Shipping To</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Shipping Back</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Insurance</p>
-              <p className="font-bold text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
-            </div>
-            <div className="bg-blue-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Total Cost</p>
-              <p className="font-bold text-blue-900">{formatCurrency(totalFees)}</p>
+              <p className="text-xs text-gray-500">Shipping</p>
+              <p className="font-medium text-gray-900">{formatCurrency(submission.shipping_cost)}</p>
             </div>
           </div>
 
-          {/* Declared Value */}
-          <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-700">
-              <DollarSign size={14} className="inline mr-1" />
-              Total Declared Value: {formatCurrency(submission.total_fee)}
+          {submission.notes && (
+            <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-lg">
+              {submission.notes}
             </p>
-          </div>
-
-          {/* Tracking Info */}
-          {(submission.notes || submission.notes) && (
-            <div className="flex gap-4 mb-6 text-sm">
-              {submission.notes && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Truck size={14} />
-                  To: {submission.notes}
-                </div>
-              )}
-              {submission.notes && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Truck size={14} />
-                  Return: {submission.notes}
-                </div>
-              )}
-            </div>
           )}
 
           {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Cards ({(submission.items?.length ?? 0)})</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Items ({submission.items?.length || 0})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-100 text-left text-gray-600">
-                  <th className="px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">Card</th>
-                  <th className="px-3 py-2 font-medium text-center">Signed</th>
-                  <th className="px-3 py-2 font-medium text-right">Value</th>
+                  <th className="px-3 py-2 font-medium text-center">Declared</th>
                   <th className="px-3 py-2 font-medium text-center">Grade</th>
-                  <th className="px-3 py-2 font-medium">Cert #</th>
+                  <th className="px-3 py-2 font-medium text-right">Cert #</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {submission.items?.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-3 py-2 text-gray-500">{item.id}</td>
                     <td className="px-3 py-2 text-gray-900">
                       {item.checklist?.player?.name || item.checklist?.player_name_raw || 'Unknown'}
                     </td>
-                    <td className="px-3 py-2 text-center">
-                      {item.notes ? (
-                        <span className="text-purple-600">✓</span>
-                      ) : (
-                        <span className="text-gray-300">-</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right text-gray-600">
-                      {item.declared_value ? formatCurrency(item.declared_value) : '-'}
+                    <td className="px-3 py-2 text-center text-gray-600">
+                      {formatCurrency(item.declared_value)}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {item.grade_received ? (
-                        <span className={`font-bold ${
-                          item.grade_received >= 10 ? 'text-green-600' :
-                          item.grade_received >= 9 ? 'text-blue-600' :
-                          'text-gray-600'
+                      {item.grade_received !== null ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                          item.grade_received >= 9 ? 'bg-green-100 text-green-700' :
+                          item.grade_received >= 7 ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-700'
                         }`}>
+                          <Award size={12} />
                           {item.grade_received}
                           {item.auto_grade_received && ` / ${item.auto_grade_received}`}
                         </span>
                       ) : (
-                        <GradeStatusBadge status={(item.notes ?? "pending")} />
+                        <span className="text-gray-400">Pending</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-gray-500 font-mono text-xs">
+                    <td className="px-3 py-2 text-right text-gray-600">
                       {item.cert_number || '-'}
                     </td>
                   </tr>
@@ -426,74 +311,8 @@ function SubmissionCard({
               </tbody>
             </table>
           </div>
-
-          {/* Actions */}
-          <div className="mt-6 flex gap-3">
-            {submission.status === 'preparing' && (
-              <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Mark as Shipped
-              </button>
-            )}
-            {submission.status === 'shipped_back' && (
-              <button
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Enter Grades
-              </button>
-            )}
-          </div>
         </div>
       )}
     </div>
-  );
-}
-
-function TimelineStep({ 
-  label, 
-  date, 
-  isComplete 
-}: { 
-  label: string; 
-  date: string | null; 
-  isComplete: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center">
-      <div className={`w-3 h-3 rounded-full ${
-        isComplete ? 'bg-green-500' : 'bg-gray-300'
-      }`} />
-      <span className={`text-xs mt-1 ${
-        isComplete ? 'text-gray-700' : 'text-gray-400'
-      }`}>
-        {label}
-      </span>
-      {date && (
-        <span className="text-xs text-gray-400">
-          {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function GradeStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, { bg: string; text: string }> = {
-    pending: { bg: 'bg-gray-100', text: 'text-gray-600' },
-    graded: { bg: 'bg-green-100', text: 'text-green-700' },
-    authentic: { bg: 'bg-blue-100', text: 'text-blue-700' },
-    altered: { bg: 'bg-red-100', text: 'text-red-700' },
-    counterfeit: { bg: 'bg-red-100', text: 'text-red-700' },
-    ungradeable: { bg: 'bg-amber-100', text: 'text-amber-700' },
-    lost: { bg: 'bg-gray-100', text: 'text-gray-500' },
-  };
-
-  const style = styles[status] || styles.pending;
-
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${style.bg} ${style.text}`}>
-      {status}
-    </span>
   );
 }

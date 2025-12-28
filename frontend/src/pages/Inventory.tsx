@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Search, ChevronDown, Plus, Minus, 
-  Pen, Award 
+  Pen, Award
 } from 'lucide-react';
 import { api } from '../api';
 import type { InventoryWithCard } from '../types';
@@ -18,8 +18,6 @@ export default function Inventory() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filterBrand, setFilterBrand] = useState('');
-  const [filterSigned, setFilterSigned] = useState<boolean | undefined>(undefined);
-  const [filterSlabbed, setFilterSlabbed] = useState<boolean | undefined>(undefined);
   const [inStockOnly, setInStockOnly] = useState(true);
 
   const { data: brands } = useQuery({
@@ -28,7 +26,7 @@ export default function Inventory() {
   });
 
   const { data: inventory, isLoading } = useQuery({
-    queryKey: ['inventory'Brand, search, inStockOnly],
+    queryKey: ['inventory', filterBrand, search, inStockOnly],
     queryFn: () => api.inventory.getInventory({
       brand_id: filterBrand || undefined,
       search: search || undefined,
@@ -43,15 +41,6 @@ export default function Inventory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },
-  });
-
-  // Filter by signed/slabbed status client-side
-  const filteredInventory = inventory?.filter((item) => {
-    if (filterSigned !== undefined && item.checklist) {
-      // This would need the inventory item's is_signed field
-      // For now, we'll skip this filter
-    }
-    return true;
   });
 
   return (
@@ -106,25 +95,25 @@ export default function Inventory() {
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Total Items</p>
           <p className="text-2xl font-bold text-gray-900">
-            {filteredInventory?.length || 0}
+            {inventory?.length || 0}
           </p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Total Cards</p>
           <p className="text-2xl font-bold text-gray-900">
-            {filteredInventory?.reduce((sum, i) => sum + i.quantity, 0) || 0}
+            {inventory?.reduce((sum, i) => sum + i.quantity, 0) || 0}
           </p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Signed Cards</p>
           <p className="text-2xl font-bold text-purple-600">
-            {filteredInventory?.filter(i => i.is_signed).reduce((sum, i) => sum + i.quantity, 0) || 0}
+            {inventory?.filter(i => i.is_signed).reduce((sum, i) => sum + i.quantity, 0) || 0}
           </p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Slabbed Cards</p>
           <p className="text-2xl font-bold text-blue-600">
-            {filteredInventory?.filter(i => i.is_slabbed).reduce((sum, i) => sum + i.quantity, 0) || 0}
+            {inventory?.filter(i => i.is_slabbed).reduce((sum, i) => sum + i.quantity, 0) || 0}
           </p>
         </div>
       </div>
@@ -153,7 +142,7 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredInventory?.map((item) => (
+              {inventory?.map((item) => (
                 <InventoryRow
                   key={item.id}
                   item={item}
@@ -162,7 +151,7 @@ export default function Inventory() {
                 />
               ))}
 
-              {filteredInventory?.length === 0 && (
+              {inventory?.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                     No inventory found. Add cards via purchases or checklist.

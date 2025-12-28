@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Plus, User, MapPin, DollarSign, Phone, Mail, 
-  MoreVertical, Package
-} from 'lucide-react';
+import { Plus, User, DollarSign, Phone, Mail, Package } from 'lucide-react';
 import { api } from '../api';
-import type { Consigner, ConsignerCreate, ConsignerStats } from '../types';
+import type { Consigner, ConsignerCreate } from '../types';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -139,10 +136,7 @@ function ConsignerCard({
             <div>
               <h3 className="font-semibold text-gray-900">{consigner.name}</h3>
               {consigner.notes && (
-                <p className="text-sm text-gray-500 flex items-center gap-1">
-                  <MapPin size={12} />
-                  {consigner.notes}
-                </p>
+                <p className="text-sm text-gray-500">{consigner.notes}</p>
               )}
             </div>
           </div>
@@ -166,7 +160,7 @@ function ConsignerCard({
               {consigner.phone}
             </p>
           )}
-          {consigner.default_fee_per_card && (
+          {consigner.default_fee_per_card > 0 && (
             <p className="text-sm text-gray-600 flex items-center gap-2">
               <DollarSign size={14} className="text-gray-400" />
               {formatCurrency(consigner.default_fee_per_card)} per card
@@ -197,8 +191,8 @@ function ConsignerCard({
               <p className="text-lg font-bold text-gray-900">{stats.total_cards_sent}</p>
             </div>
             <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-500">Cards Signed</p>
-              <p className="text-lg font-bold text-green-600">{stats.total_cards_sent}</p>
+              <p className="text-xs text-gray-500">Cards Returned</p>
+              <p className="text-lg font-bold text-green-600">{stats.total_cards_returned}</p>
             </div>
             <div className="bg-white rounded-lg p-3">
               <p className="text-xs text-gray-500">Success Rate</p>
@@ -249,10 +243,8 @@ function CreateConsignerModal({
     name: '',
     email: '',
     phone: '',
-    
-    default_fee: undefined,
+    default_fee_per_card: 0,
     payment_method: '',
-    payment_details: '',
     notes: '',
   });
   const [error, setError] = useState('');
@@ -311,49 +303,26 @@ function CreateConsignerModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location/Area</label>
-            <input
-              type="text"
-              value={formData.location || ''}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="e.g., NYC area, Spring Training"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Default Fee (per card)</label>
             <input
               type="number"
               step="0.01"
               value={formData.default_fee_per_card || ''}
-              onChange={(e) => setFormData({ ...formData, default_fee: parseFloat(e.target.value) || undefined })}
+              onChange={(e) => setFormData({ ...formData, default_fee_per_card: parseFloat(e.target.value) || 0 })}
               placeholder="e.g., 15.00"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-              <input
-                type="text"
-                value={formData.payment_method || ''}
-                onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                placeholder="Venmo, PayPal, etc."
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Details</label>
-              <input
-                type="text"
-                value={formData.payment_method || ''}
-                onChange={(e) => setFormData({ ...formData, payment_details: e.target.value })}
-                placeholder="@username"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+            <input
+              type="text"
+              value={formData.payment_method || ''}
+              onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+              placeholder="Venmo, PayPal, etc."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           <div>
@@ -362,6 +331,7 @@ function CreateConsignerModal({
               value={formData.notes || ''}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={2}
+              placeholder="Location, special arrangements, etc."
               className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>

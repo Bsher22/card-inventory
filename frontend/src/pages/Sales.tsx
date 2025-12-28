@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Package
 } from 'lucide-react';
 import { api } from '../api';
-import type { Sale, SalesAnalytics } from '../types';
+import type { Sale } from '../types';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -231,16 +231,16 @@ function SaleCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const totalCards = (sale.items?.reduce((sum, i) => sum + i.quantity, 0);
-  const totalProfit = (sale.items?.reduce((sum, i) => {
+  const totalCards = sale.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
+  const totalProfit = sale.items?.reduce((sum, i) => {
     const revenue = i.sale_price * i.quantity;
     const cost = (i.cost_basis || 0);
     return sum + (revenue - cost);
-  }, 0);
+  }, 0) || 0;
 
   // Net revenue after fees
-  const netRevenue = (sale.gross_amount || 0) + sale.shipping_collected - 
-    sale.platform_fees - sale.payment_fees - sale.shipping_cost;
+  const netRevenue = (sale.gross_amount || 0) + (sale.shipping_collected || 0) - 
+    (sale.platform_fees || 0) - (sale.payment_fees || 0) - (sale.shipping_cost || 0);
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -305,15 +305,15 @@ function SaleCard({
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping Charged</p>
-              <p className="font-bold text-gray-900">{formatCurrency(sale.shipping_collected)}</p>
+              <p className="font-bold text-gray-900">{formatCurrency(sale.shipping_collected || 0)}</p>
             </div>
             <div className="bg-red-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Platform Fees</p>
-              <p className="font-bold text-red-600">-{formatCurrency(sale.platform_fees)}</p>
+              <p className="font-bold text-red-600">-{formatCurrency(sale.platform_fees || 0)}</p>
             </div>
             <div className="bg-red-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Payment Fees</p>
-              <p className="font-bold text-red-600">-{formatCurrency(sale.payment_fees)}</p>
+              <p className="font-bold text-red-600">-{formatCurrency(sale.payment_fees || 0)}</p>
             </div>
             <div className="bg-green-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Net Revenue</p>
@@ -328,13 +328,12 @@ function SaleCard({
           )}
 
           {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Items ({(sale.items?.length ?? 0)})</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Items ({sale.items?.length || 0})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-100 text-left text-gray-600">
                   <th className="px-3 py-2 font-medium">Card</th>
-                  <th className="px-3 py-2 font-medium text-center">Condition</th>
                   <th className="px-3 py-2 font-medium text-center">Qty</th>
                   <th className="px-3 py-2 font-medium text-right">Price</th>
                   <th className="px-3 py-2 font-medium text-right">Cost</th>
@@ -350,14 +349,7 @@ function SaleCard({
                   return (
                     <tr key={item.id}>
                       <td className="px-3 py-2 text-gray-900">
-                        Checklist #{item.checklist_id.slice(0, 8)}...
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        {false ? (
-                          <span className="text-blue-600">{""} {item.grade_value}</span>
-                        ) : (
-                          <span className="text-gray-600">{"" || 'Raw'}</span>
-                        )}
+                        {item.checklist?.player?.name || item.checklist?.player_name_raw || `Checklist #${item.checklist_id.slice(0, 8)}...`}
                       </td>
                       <td className="px-3 py-2 text-center text-gray-600">{item.quantity}</td>
                       <td className="px-3 py-2 text-right text-gray-900">

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, ChevronDown, Star, Pen } from 'lucide-react';
 import { api } from '../api';
-import type { ProductLineSummary } from '../types';
 
 export default function Checklists() {
   const [search, setSearch] = useState('');
@@ -16,26 +15,16 @@ export default function Checklists() {
   });
 
   const { data: checklists, isLoading } = useQuery({
-    queryKey: ['checklists'ProductLineRookieAuto, search],
+    queryKey: ['checklists', filterProductLine, filterRookie, filterAuto, search],
     queryFn: () => api.checklists.getChecklists({
       product_line_id: filterProductLine || undefined,
-      is_rookie: filterRookie,
-      is_auto: filterAuto,
+      is_rookie_card: filterRookie,
+      is_autograph: filterAuto,
       search: search || undefined,
       limit: 200,
     }),
     enabled: true,
   });
-
-  // Group by product line for display
-  const groupedByProductLine = checklists?.reduce((acc, card) => {
-    const plName = card.product_line 
-      ? `${card.product_line.year} ${card.product_line.name}`
-      : 'Unknown';
-    if (!acc[plName]) acc[plName] = [];
-    acc[plName].push(card);
-    return acc;
-  }, {} as Record<string, typeof checklists>);
 
   return (
     <div className="p-8">
@@ -66,7 +55,7 @@ export default function Checklists() {
             <option value="">All Product Lines</option>
             {productLines?.map((pl) => (
               <option key={pl.id} value={pl.id}>
-                {pl.year} {pl.brand_name} {pl.name}
+                {pl.year} {pl.brand?.name} {pl.name}
               </option>
             ))}
           </select>
@@ -168,18 +157,18 @@ export default function Checklists() {
                           Relic
                         </span>
                       )}
-                      {card.serial_numbered && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">
-                          SP
+                      {card.is_first_bowman && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
+                          1st
                         </span>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className={`font-medium ${
-                      card.inventory_count > 0 ? 'text-green-600' : 'text-gray-400'
+                      (card.inventory_count || 0) > 0 ? 'text-green-600' : 'text-gray-400'
                     }`}>
-                      {card.inventory_count}
+                      {card.inventory_count || 0}
                     </span>
                   </td>
                 </tr>

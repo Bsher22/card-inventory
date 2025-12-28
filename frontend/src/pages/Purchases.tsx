@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Plus, Calendar, 
+  Plus, Calendar,
   ChevronDown, ChevronRight, Package
 } from 'lucide-react';
 import { api } from '../api';
@@ -37,7 +37,7 @@ export default function Purchases() {
   // Calculate totals
   const totalSpent = purchases?.reduce((sum, p) => sum + (p.total || 0), 0) || 0;
   const totalCards = purchases?.reduce((sum, p) => 
-    sum + (p.items?.reduce((isum, i) => isum + i.quantity, 0), 0
+    sum + (p.items?.reduce((isum, i) => isum + i.quantity, 0) || 0), 0
   ) || 0;
 
   return (
@@ -142,7 +142,7 @@ function PurchaseCard({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const totalCards = (purchase.items?.reduce((sum, i) => sum + i.quantity, 0);
+  const totalCards = purchase.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -185,9 +185,9 @@ function PurchaseCard({
             <p className="text-xl font-bold text-gray-900">
               {formatCurrency(purchase.total || 0)}
             </p>
-            {purchase.shipping > 0 && (
+            {(purchase.shipping || 0) > 0 && (
               <p className="text-sm text-gray-500">
-                +{formatCurrency(purchase.shipping)} shipping
+                +{formatCurrency(purchase.shipping || 0)} shipping
               </p>
             )}
           </div>
@@ -204,15 +204,14 @@ function PurchaseCard({
           )}
 
           {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Items ({(purchase.items?.length ?? 0)})</h4>
+          <h4 className="font-medium text-gray-900 mb-3">Items ({purchase.items?.length || 0})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-100 text-left text-gray-600">
                   <th className="px-3 py-2 font-medium">Card</th>
-                  <th className="px-3 py-2 font-medium text-center">Condition</th>
                   <th className="px-3 py-2 font-medium text-center">Qty</th>
-                  <th className="px-3 py-2 font-medium text-right">Unit Cost</th>
+                  <th className="px-3 py-2 font-medium text-right">Unit Price</th>
                   <th className="px-3 py-2 font-medium text-right">Total</th>
                 </tr>
               </thead>
@@ -220,14 +219,7 @@ function PurchaseCard({
                 {purchase.items?.map((item) => (
                   <tr key={item.id}>
                     <td className="px-3 py-2 text-gray-900">
-                      Checklist #{item.checklist_id.slice(0, 8)}...
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      {false ? (
-                        <span className="text-blue-600">{""} {item.grade_value}</span>
-                      ) : (
-                        <span className="text-gray-600">{item.condition}</span>
-                      )}
+                      {item.checklist?.player?.name || item.checklist?.player_name_raw || `Checklist #${item.checklist_id.slice(0, 8)}...`}
                     </td>
                     <td className="px-3 py-2 text-center text-gray-600">{item.quantity}</td>
                     <td className="px-3 py-2 text-right text-gray-600">
@@ -241,7 +233,7 @@ function PurchaseCard({
               </tbody>
               <tfoot>
                 <tr className="bg-gray-100">
-                  <td colSpan={4} className="px-3 py-2 text-right font-medium text-gray-700">
+                  <td colSpan={3} className="px-3 py-2 text-right font-medium text-gray-700">
                     Total
                   </td>
                   <td className="px-3 py-2 text-right font-bold text-gray-900">
