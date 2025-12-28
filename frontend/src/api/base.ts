@@ -60,7 +60,7 @@ function getHeaders(contentType?: string): Record<string, string> {
 /**
  * Handle API response - check for auth errors
  */
-async function handleResponse<T>(response: Response): Promise<T> {
+export async function handleResponse<T>(response: Response): Promise<T> {
   // Handle 401 Unauthorized - redirect to login
   if (response.status === 401) {
     // Clear stored token
