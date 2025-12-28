@@ -250,7 +250,16 @@ class ChecklistParser:
         # Filter for prospects only (for preview)
         total_all = len(df)
         if 'set_name' in df.columns:
-            prospects_df = df[df['set_name'].astype(str).str.lower().str.contains('prospect', na=False)]
+            # Keep rows where set_name indicates prospect/draft pick cards
+            set_name_lower = df['set_name'].astype(str).str.lower()
+            mask = (
+                set_name_lower.str.contains('prospect', na=False) |
+                set_name_lower.str.contains('chrome', na=False) |
+                set_name_lower.str.contains('autograph', na=False)
+            )
+            # Exclude base veteran sets
+            exclude_mask = set_name_lower.isin(['base', 'bowman base'])
+            prospects_df = df[mask & ~exclude_mask]
         else:
             prospects_df = df
         
@@ -303,8 +312,19 @@ class ChecklistParser:
         # Filter for prospects only if requested
         total_before_filter = len(df)
         if prospects_only and 'set_name' in df.columns:
-            # Keep rows where set_name contains "prospect" (case insensitive)
-            df = df[df['set_name'].astype(str).str.lower().str.contains('prospect', na=False)]
+            # Keep rows where set_name indicates prospect/draft pick cards:
+            # - "Prospect" for regular Bowman/Bowman Chrome
+            # - "Chrome" for Bowman Draft (Chrome Base and Chrome Autographs are the key cards)
+            # - "Autograph" to include all autograph sets
+            set_name_lower = df['set_name'].astype(str).str.lower()
+            mask = (
+                set_name_lower.str.contains('prospect', na=False) |
+                set_name_lower.str.contains('chrome', na=False) |
+                set_name_lower.str.contains('autograph', na=False)
+            )
+            # Exclude base veteran sets (non-chrome base)
+            exclude_mask = set_name_lower.isin(['base', 'bowman base'])
+            df = df[mask & ~exclude_mask]
         
         # Load caches
         await self._load_player_cache()
@@ -410,12 +430,14 @@ class ChecklistParser:
                 # Detect card type
                 card_type_id = self._detect_card_type(parallel_name)
                 
-                # Check if card already exists (unique by product_line + card_number + set_name)
+                # Check if card already exists (unique by product_line + set_name + card_number + player)
+                # Bowman can have same card number for different players (e.g., CPA-BL for multiple players)
                 existing = await self.db.execute(
                     select(Checklist).where(
                         Checklist.product_line_id == product_line_id,
                         Checklist.card_number == card_number,
                         Checklist.set_name == set_name,
+                        Checklist.player_name_raw == (str(player_name) if player_name else None),
                     )
                 )
                 existing_card = existing.scalar_one_or_none()
@@ -423,9 +445,7 @@ class ChecklistParser:
                 if existing_card:
                     # Update existing
                     existing_card.player_id = player_id
-                    existing_card.player_name_raw = str(player_name) if player_name else None
                     existing_card.card_type_id = card_type_id
-                    existing_card.set_name = set_name
                     existing_card.parallel_name = parallel_name
                     existing_card.serial_numbered = serial_numbered
                     existing_card.is_autograph = is_auto
@@ -452,8 +472,16 @@ class ChecklistParser:
                     self.db.add(new_card)
                     result.cards_created += 1
                 
+                # Flush after each card to catch constraint violations early
+                try:
+                    await self.db.flush()
+                except Exception as flush_error:
+                    await self.db.rollback()
+                    result.errors.append(f"Row {idx + 1}: {str(flush_error)}")
+                    result.cards_created = max(0, result.cards_created - 1)
+                    continue
+                
             except Exception as e:
                 result.errors.append(f"Row {idx + 1}: {str(e)}")
         
-        await self.db.flush()
         return result
