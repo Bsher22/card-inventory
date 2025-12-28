@@ -44,6 +44,9 @@ from .card_types import (
     CardPrefixMapping,
 )
 
+# eBay
+from .ebay import EbayImportBatch, EbayListingSale
+
 # Authentication
 from .users import User
 
@@ -80,6 +83,9 @@ __all__ = [
     "ParallelCategory",
     "Parallel",
     "CardPrefixMapping",
+    # eBay
+    "EbayImportBatch",
+    "EbayListingSale",
     # Authentication
     "User",
 ]

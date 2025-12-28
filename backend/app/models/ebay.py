@@ -10,12 +10,13 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UUID
+    Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from .database import Base
+from .base import Base
 
 
 class EbayImportBatch(Base):
@@ -62,7 +63,7 @@ class EbayListingSale(Base):
     
     # eBay listing info
     listing_title: Mapped[str] = mapped_column(String(500), nullable=False)
-    ebay_item_id: Mapped[str] = mapped_column(String(50), nullable=False)  # Store as string to preserve full number
+    ebay_item_id: Mapped[str] = mapped_column(String(50), nullable=False)
     
     # Sales quantities
     quantity_sold: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -71,7 +72,7 @@ class EbayListingSale(Base):
     quantity_via_seller_offer: Mapped[int] = mapped_column(Integer, default=0)
     
     # Revenue (all in USD)
-    total_sales: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)  # Includes taxes
+    total_sales: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     item_sales: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     shipping_collected: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     taxes_to_seller: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)

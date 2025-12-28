@@ -12,9 +12,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..database import get_db
-from ..models_ebay import EbayImportBatch, EbayListingSale
-from ..schemas_ebay import (
+from app.database import get_db
+from app.models import EbayImportBatch, EbayListingSale
+from app.schemas.ebay import (
     EbayImportBatchDetail,
     EbayImportBatchRead,
     EbayImportRequest,
@@ -23,7 +23,7 @@ from ..schemas_ebay import (
     EbaySalesAnalytics,
     EbayUploadPreviewResponse,
 )
-from .services.ebay_parser import parse_ebay_csv
+from app.services.ebay_parser import parse_ebay_csv
 
 router = APIRouter(prefix="/sales/ebay", tags=["eBay Sales"])
 
@@ -46,13 +46,11 @@ async def preview_ebay_upload(
     if not file.filename.lower().endswith('.csv'):
         raise HTTPException(status_code=400, detail="File must be a CSV")
     
-    # Read file content
     content = await file.read()
     
     if len(content) == 0:
         raise HTTPException(status_code=400, detail="File is empty")
     
-    # Parse the CSV
     result = parse_ebay_csv(content)
     
     return result
@@ -74,12 +72,10 @@ async def import_ebay_sales(
     if not request.listings:
         raise HTTPException(status_code=400, detail="No listings to import")
     
-    # Calculate totals
     total_quantity = sum(l.quantity_sold for l in request.listings)
     total_item_sales = sum(l.item_sales for l in request.listings)
     total_net_sales = sum(l.net_sales for l in request.listings)
     
-    # Create import batch
     batch = EbayImportBatch(
         report_start_date=request.report_start_date,
         report_end_date=request.report_end_date,
@@ -90,9 +86,8 @@ async def import_ebay_sales(
         notes=request.notes,
     )
     db.add(batch)
-    await db.flush()  # Get the batch ID
+    await db.flush()
     
-    # Create listing records
     for listing_data in request.listings:
         listing = EbayListingSale(
             import_batch_id=batch.id,
@@ -236,11 +231,9 @@ async def get_ebay_analytics(
     db: AsyncSession = Depends(get_db),
 ):
     """Get summary analytics for all eBay sales."""
-    # Batch counts
     batch_count = await db.execute(select(func.count(EbayImportBatch.id)))
     total_batches = batch_count.scalar() or 0
     
-    # Listing aggregates
     result = await db.execute(
         select(
             func.count(EbayListingSale.id),
@@ -258,7 +251,6 @@ async def get_ebay_analytics(
     total_net_sales = row[3] or Decimal("0")
     total_fees = row[4] or Decimal("0")
     
-    # Calculate average fee percentage
     avg_fee_pct = Decimal("0")
     if total_item_sales > 0:
         avg_fee_pct = (total_fees / total_item_sales * 100).quantize(Decimal("0.01"))

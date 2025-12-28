@@ -2,11 +2,6 @@
 eBay Sales Report Parser Service
 
 Parses eBay "Listings & Sales Report" CSV files.
-Handles the specific format including:
-- Skip disclaimer rows (first 9 rows)
-- Parse report date range from row 9
-- Parse money values (strip $, commas)
-- Handle scientific notation in item IDs
 """
 import csv
 import io
@@ -15,7 +10,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
-from ..schemas_ebay import EbayListingPreview, EbayUploadPreviewResponse
+from app.schemas.ebay import EbayListingPreview, EbayUploadPreviewResponse
 
 
 def parse_money(value: str) -> Decimal:
@@ -23,7 +18,6 @@ def parse_money(value: str) -> Decimal:
     if not value or value.strip() == '':
         return Decimal("0")
     
-    # Remove $, commas, spaces, and quotes
     cleaned = value.strip().replace('$', '').replace(',', '').replace('"', '').strip()
     
     if not cleaned:
@@ -45,10 +39,8 @@ def parse_ebay_item_id(value: str) -> str:
     
     value = value.strip()
     
-    # Check if it's in scientific notation
     if 'E' in value.upper():
         try:
-            # Convert to float first, then to int to remove decimals
             num = float(value)
             return str(int(num))
         except (ValueError, OverflowError):
@@ -106,7 +98,6 @@ def parse_ebay_csv(file_content: bytes) -> EbayUploadPreviewResponse:
     listings = []
     
     try:
-        # Decode content - handle BOM
         content = file_content.decode('utf-8-sig')
     except UnicodeDecodeError:
         try:
@@ -118,7 +109,6 @@ def parse_ebay_csv(file_content: bytes) -> EbayUploadPreviewResponse:
                 warnings=["File encoding not recognized"]
             )
     
-    # Parse CSV
     reader = csv.reader(io.StringIO(content))
     rows = list(reader)
     
@@ -129,7 +119,6 @@ def parse_ebay_csv(file_content: bytes) -> EbayUploadPreviewResponse:
             warnings=["File has fewer than 11 rows"]
         )
     
-    # Parse date range from row 9 (index 8)
     report_start_date = None
     report_end_date = None
     
@@ -142,7 +131,6 @@ def parse_ebay_csv(file_content: bytes) -> EbayUploadPreviewResponse:
     if not report_start_date:
         warnings.append("Could not parse report date range from file")
     
-    # Find header row (should be row 10, index 9)
     header_row_index = None
     for i in range(min(15, len(rows))):
         if rows[i] and 'Listing title' in rows[i][0]:
@@ -157,11 +145,8 @@ def parse_ebay_csv(file_content: bytes) -> EbayUploadPreviewResponse:
         )
     
     headers = rows[header_row_index]
-    
-    # Map column indices
     col_map = {h.strip(): i for i, h in enumerate(headers)}
     
-    # Required columns
     required_cols = ['Listing title', 'eBay item ID', 'Quantity sold', 'Item sales', 'Net sales (Net of taxes and selling costs)']
     missing_cols = [c for c in required_cols if c not in col_map]
     
@@ -172,23 +157,19 @@ def parse_ebay_csv(file_content: bytes) -> EbayUploadPreviewResponse:
             warnings=[f"Missing column: {c}" for c in missing_cols]
         )
     
-    # Process data rows
     data_start = header_row_index + 1
     total_quantity = 0
     total_item_sales = Decimal("0")
     total_net_sales = Decimal("0")
     
     for row_num, row in enumerate(rows[data_start:], start=1):
-        # Skip empty rows
         if not row or not row[0].strip():
             continue
         
-        # Skip if the row looks like a header or disclaimer
         if 'Listing title' in row[0] or 'Disclaimers' in row[0]:
             continue
         
         try:
-            # Helper to get column value safely
             def get_col(name: str, default: str = "") -> str:
                 idx = col_map.get(name)
                 if idx is not None and idx < len(row):

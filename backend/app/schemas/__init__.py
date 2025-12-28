@@ -152,6 +152,25 @@ from .card_types import (
     ParallelFilter,
 )
 
+# eBay
+from .ebay import (
+    # Listing Generation
+    EbayItemSpecifics,
+    EbayListingData,
+    EbayListingRequest,
+    EbayListingResponse,
+    # Sales Import
+    EbayListingPreview,
+    EbayUploadPreviewResponse,
+    EbayListingCreate,
+    EbayImportRequest,
+    EbayImportResponse,
+    EbayListingSaleRead,
+    EbayImportBatchRead,
+    EbayImportBatchDetail,
+    EbaySalesAnalytics,
+)
+
 # Authentication
 from .auth import (
     Token,
@@ -286,6 +305,21 @@ __all__ = [
     "CardPrefixMappingCreate",
     "CardPrefixMappingResponse",
     "ParallelFilter",
+    # eBay - Listing Generation
+    "EbayItemSpecifics",
+    "EbayListingData",
+    "EbayListingRequest",
+    "EbayListingResponse",
+    # eBay - Sales Import
+    "EbayListingPreview",
+    "EbayUploadPreviewResponse",
+    "EbayListingCreate",
+    "EbayImportRequest",
+    "EbayImportResponse",
+    "EbayListingSaleRead",
+    "EbayImportBatchRead",
+    "EbayImportBatchDetail",
+    "EbaySalesAnalytics",
     # Authentication
     "Token",
     "TokenData",
