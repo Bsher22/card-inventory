@@ -88,7 +88,8 @@ export interface PurchaseCreate {
   tax: number;
   notes?: string | null;
   items: PurchaseItemCreate[];
-  add_to_inventory: boolean;
+  /** Auto-add purchased cards to inventory (default: true) */
+  add_to_inventory?: boolean;
 }
 
 export interface Purchase {

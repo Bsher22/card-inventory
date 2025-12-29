@@ -26,6 +26,15 @@ from .checklists import ChecklistResponse
 # PURCHASE ITEM SCHEMAS
 # ============================================
 
+class PurchaseItemBase(BaseModel):
+    """Base purchase item schema for backward compatibility"""
+    checklist_id: UUID
+    quantity: int = Field(default=1, ge=1)
+    unit_price: Decimal = Field(default=Decimal("0"), ge=0)
+    condition: str = Field(default="Raw", max_length=50)
+    notes: Optional[str] = None
+
+
 class PurchaseItemCreate(BaseModel):
     """
     Create a purchase item - supports two modes:
@@ -84,6 +93,17 @@ class PurchaseItemResponse(BaseSchema):
 # PURCHASE SCHEMAS
 # ============================================
 
+class PurchaseBase(BaseModel):
+    """Base purchase schema for backward compatibility"""
+    purchase_date: date
+    vendor: Optional[str] = Field(None, max_length=200)
+    platform: Optional[str] = Field(None, max_length=100)
+    order_number: Optional[str] = Field(None, max_length=100)
+    shipping: Decimal = Field(default=Decimal("0"), ge=0)
+    tax: Decimal = Field(default=Decimal("0"), ge=0)
+    notes: Optional[str] = None
+
+
 class PurchaseCreate(BaseModel):
     purchase_date: date
     vendor: Optional[str] = Field(None, max_length=200)
@@ -116,6 +136,14 @@ class PurchaseResponse(BaseSchema):
 # SALE ITEM SCHEMAS
 # ============================================
 
+class SaleItemBase(BaseModel):
+    """Base sale item schema for backward compatibility"""
+    checklist_id: Optional[UUID] = None
+    quantity: int = Field(default=1, ge=1)
+    sale_price: Decimal = Field(default=Decimal("0"), ge=0)
+    notes: Optional[str] = None
+
+
 class SaleItemCreate(BaseModel):
     # OPTIONAL: Allows eBay imports without card-level linkage
     checklist_id: Optional[UUID] = None
@@ -138,6 +166,19 @@ class SaleItemResponse(BaseSchema):
 # ============================================
 # SALE SCHEMAS
 # ============================================
+
+class SaleBase(BaseModel):
+    """Base sale schema for backward compatibility"""
+    sale_date: date
+    platform: Optional[str] = Field(None, max_length=100)
+    buyer_name: Optional[str] = Field(None, max_length=200)
+    order_number: Optional[str] = Field(None, max_length=100)
+    platform_fees: Decimal = Field(default=Decimal("0"), ge=0)
+    payment_fees: Decimal = Field(default=Decimal("0"), ge=0)
+    shipping_collected: Decimal = Field(default=Decimal("0"), ge=0)
+    shipping_cost: Decimal = Field(default=Decimal("0"), ge=0)
+    notes: Optional[str] = None
+
 
 class SaleCreate(BaseModel):
     sale_date: date
