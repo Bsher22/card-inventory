@@ -3,6 +3,8 @@
  * Types for Purchases, Sales, and Analytics
  */
 
+import type { Checklist } from './checklists';
+
 // ============================================
 // PURCHASE TYPES
 // ============================================
@@ -138,74 +140,4 @@ export interface DashboardStats {
   first_bowman_count: number;
   rookie_count: number;
   graded_count: number;
-}
-
-// ============================================
-// INVENTORY TYPES (for reference in sales)
-// ============================================
-
-export interface InventoryWithCard {
-  id: string;
-  checklist_id: string;
-  quantity: number;
-  condition?: string;
-  is_signed: boolean;
-  is_slabbed: boolean;
-  grade_company?: string | null;
-  grade_value?: string | null;
-  cert_number?: string | null;
-  total_cost: number;
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
-  checklist?: Checklist;
-}
-
-// ============================================
-// CHECKLIST TYPES (for reference)
-// ============================================
-
-export interface Checklist {
-  id: string;
-  product_line_id: string;
-  card_number: string;
-  card_prefix?: string | null;
-  card_suffix?: string | null;
-  player_name_raw: string;
-  team?: string | null;
-  is_autograph: boolean;
-  is_rookie_card: boolean;
-  is_first_bowman: boolean;
-  set_name?: string | null;
-  parallel_id?: string | null;
-  serial_numbered?: number | null;
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
-  product_line?: ProductLine;
-  player?: Player;
-}
-
-export interface ProductLine {
-  id: string;
-  brand_id: string;
-  name: string;
-  year: number;
-  release_date?: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  brand?: Brand;
-}
-
-export interface Brand {
-  id: string;
-  name: string;
-  is_active: boolean;
-}
-
-export interface Player {
-  id: string;
-  name: string;
-  team?: string | null;
 }

@@ -18,6 +18,8 @@ export async function getInventory(params?: {
   player_id?: string;
   brand_id?: string;
   in_stock_only?: boolean;
+  is_signed?: boolean;
+  is_slabbed?: boolean;
   search?: string;
   skip?: number;
   limit?: number;

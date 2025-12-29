@@ -1,6 +1,8 @@
 // src/types/consignments.ts
 // Consignment types with address fields for consigners
 
+import type { Checklist } from './checklists';
+
 // ============================================
 // CONSIGNER TYPES
 // ============================================
@@ -187,6 +189,7 @@ export interface ConsignmentItem extends ConsignmentItemBase {
   consignment_id: string;
   created_at: string;
   updated_at: string;
+  checklist?: Checklist | null;
 }
 
 

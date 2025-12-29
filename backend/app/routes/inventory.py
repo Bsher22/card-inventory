@@ -27,6 +27,8 @@ async def list_inventory(
     player_id: Optional[UUID] = Query(None),
     brand_id: Optional[UUID] = Query(None),
     in_stock_only: bool = Query(True),
+    is_signed: Optional[bool] = Query(None),
+    is_slabbed: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
@@ -41,6 +43,8 @@ async def list_inventory(
         player_id=player_id,
         brand_id=brand_id,
         in_stock_only=in_stock_only,
+        is_signed=is_signed,
+        is_slabbed=is_slabbed,
         search=search,
     )
 

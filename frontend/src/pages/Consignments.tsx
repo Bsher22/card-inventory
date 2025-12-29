@@ -254,7 +254,7 @@ function ConsignmentCard({
                       <span className={`px-2 py-0.5 rounded text-xs ${
                         item.status === 'signed' 
                           ? 'bg-green-100 text-green-700'
-                          : item.status === 'refused'
+                          : item.status === 'rejected'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-gray-100 text-gray-600'
                       }`}>

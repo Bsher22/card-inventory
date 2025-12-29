@@ -111,6 +111,7 @@ class ConsignmentItemResponse(BaseModel):
     status: str
     date_signed: Optional[date]
     inscription: Optional[str]
+    checklist: Optional[dict] = None  # Nested checklist with player info
     
     class Config:
         from_attributes = True

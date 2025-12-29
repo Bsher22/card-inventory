@@ -168,7 +168,7 @@ function InventorySearchModal({
                           </span>
                         )}
                         <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                          {item.condition || 'NM'}
+                          {item.raw_condition || 'NM'}
                         </span>
                       </div>
                     </div>

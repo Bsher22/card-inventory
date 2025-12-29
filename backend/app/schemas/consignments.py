@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, computed_field
 
+from .checklists import ChecklistResponse
+
 
 # ============================================
 # CONSIGNER SCHEMAS
@@ -210,6 +212,52 @@ class ConsignmentItemResponse(ConsignmentItemBase):
     consignment_id: UUID
     created_at: datetime
     updated_at: datetime
+    checklist: Optional[ChecklistResponse] = None
     
     class Config:
         from_attributes = True
+
+
+# ============================================
+# CONSIGNER STATS SCHEMA
+# ============================================
+
+class ConsignerStats(BaseModel):
+    """Statistics for a consigner."""
+    total_consignments: int
+    total_cards_sent: int
+    cards_signed: int
+    cards_refused: int
+    cards_pending: int
+    total_fees_paid: Decimal
+    success_rate: float
+
+
+# ============================================
+# CONSIGNMENT RETURN SCHEMAS
+# ============================================
+
+class ConsignmentReturnItem(BaseModel):
+    """Individual item result in a consignment return."""
+    consignment_item_id: UUID
+    status: str = Field(..., pattern="^(signed|rejected|lost)$")
+    date_signed: Optional[date] = None
+    inscription: Optional[str] = None
+    condition_notes: Optional[str] = None
+
+
+class ConsignmentReturn(BaseModel):
+    """Schema for processing a consignment return."""
+    date_returned: date
+    items: list[ConsignmentReturnItem]
+
+
+# ============================================
+# PENDING CONSIGNMENTS VALUE SCHEMA
+# ============================================
+
+class PendingConsignmentsValue(BaseModel):
+    """Value of pending consignments."""
+    total_cards_out: int
+    total_pending_fees: Decimal
+    consignments_out: int
