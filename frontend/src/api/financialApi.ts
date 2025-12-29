@@ -3,13 +3,14 @@
  * Handles Purchases, Sales, and Analytics
  */
 
-import { apiRequest, buildQueryString } from './base';
+import { apiGet, apiPost, apiDelete } from './base';
 import type {
   Purchase,
   PurchaseCreate,
   Sale,
   SaleCreate,
   SalesAnalytics,
+  PurchaseAnalytics,
   DashboardStats,
 } from '../types';
 
@@ -24,23 +25,30 @@ export async function getPurchases(params?: {
   skip?: number;
   limit?: number;
 }): Promise<Purchase[]> {
-  const query = params ? buildQueryString(params) : '';
-  return apiRequest<Purchase[]>(`/purchases${query}`);
+  const searchParams = new URLSearchParams();
+  if (params?.vendor) searchParams.set('vendor', params.vendor);
+  if (params?.start_date) searchParams.set('start_date', params.start_date);
+  if (params?.end_date) searchParams.set('end_date', params.end_date);
+  if (params?.skip) searchParams.set('skip', params.skip.toString());
+  if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+  const query = searchParams.toString();
+  return apiGet<Purchase[]>(`/purchases${query ? `?${query}` : ''}`);
 }
 
 export async function getPurchase(id: string): Promise<Purchase> {
-  return apiRequest<Purchase>(`/purchases/${id}`);
+  return apiGet<Purchase>(`/purchases/${id}`);
 }
 
-export async function createPurchase(data: PurchaseCreate, addToInventory = true): Promise<Purchase> {
-  return apiRequest<Purchase>(`/purchases?add_to_inventory=${addToInventory}`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+export async function createPurchase(
+  data: PurchaseCreate,
+  addToInventory = true
+): Promise<Purchase> {
+  return apiPost<Purchase>(`/purchases?add_to_inventory=${addToInventory}`, data);
 }
 
 export async function deletePurchase(id: string): Promise<void> {
-  return apiRequest<void>(`/purchases/${id}`, { method: 'DELETE' });
+  return apiDelete<void>(`/purchases/${id}`);
 }
 
 // ============================================
@@ -54,40 +62,67 @@ export async function getSales(params?: {
   skip?: number;
   limit?: number;
 }): Promise<Sale[]> {
-  const query = params ? buildQueryString(params) : '';
-  return apiRequest<Sale[]>(`/sales${query}`);
+  const searchParams = new URLSearchParams();
+  if (params?.platform) searchParams.set('platform', params.platform);
+  if (params?.start_date) searchParams.set('start_date', params.start_date);
+  if (params?.end_date) searchParams.set('end_date', params.end_date);
+  if (params?.skip) searchParams.set('skip', params.skip.toString());
+  if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+  const query = searchParams.toString();
+  return apiGet<Sale[]>(`/sales${query ? `?${query}` : ''}`);
 }
 
 export async function getSale(id: string): Promise<Sale> {
-  return apiRequest<Sale>(`/sales/${id}`);
+  return apiGet<Sale>(`/sales/${id}`);
 }
+
+export async function createSale(
+  data: SaleCreate,
+  removeFromInventory = true
+): Promise<Sale> {
+  return apiPost<Sale>(`/sales?remove_from_inventory=${removeFromInventory}`, data);
+}
+
+export async function deleteSale(id: string): Promise<void> {
+  return apiDelete<void>(`/sales/${id}`);
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
 
 export async function getSalesAnalytics(params?: {
   start_date?: string;
   end_date?: string;
 }): Promise<SalesAnalytics> {
-  const query = params ? buildQueryString(params) : '';
-  return apiRequest<SalesAnalytics>(`/sales/analytics${query}`);
+  const searchParams = new URLSearchParams();
+  if (params?.start_date) searchParams.set('start_date', params.start_date);
+  if (params?.end_date) searchParams.set('end_date', params.end_date);
+
+  const query = searchParams.toString();
+  return apiGet<SalesAnalytics>(`/sales/analytics${query ? `?${query}` : ''}`);
 }
 
-export async function createSale(data: SaleCreate, removeFromInventory = true): Promise<Sale> {
-  return apiRequest<Sale>(`/sales?remove_from_inventory=${removeFromInventory}`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
+export async function getPurchaseAnalytics(params?: {
+  start_date?: string;
+  end_date?: string;
+}): Promise<PurchaseAnalytics> {
+  const searchParams = new URLSearchParams();
+  if (params?.start_date) searchParams.set('start_date', params.start_date);
+  if (params?.end_date) searchParams.set('end_date', params.end_date);
 
-export async function deleteSale(id: string): Promise<void> {
-  return apiRequest<void>(`/sales/${id}`, { method: 'DELETE' });
+  const query = searchParams.toString();
+  return apiGet<PurchaseAnalytics>(`/purchases/analytics${query ? `?${query}` : ''}`);
 }
-
-// ============================================
-// DASHBOARD / ANALYTICS
-// ============================================
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  return apiRequest<DashboardStats>('/dashboard/stats');
+  return apiGet<DashboardStats>(`/inventory/analytics`);
 }
+
+// ============================================
+// EXPORT
+// ============================================
 
 export const financialApi = {
   // Purchases
@@ -95,12 +130,17 @@ export const financialApi = {
   getPurchase,
   createPurchase,
   deletePurchase,
+
   // Sales
   getSales,
   getSale,
-  getSalesAnalytics,
   createSale,
   deleteSale,
-  // Dashboard
+
+  // Analytics
+  getSalesAnalytics,
+  getPurchaseAnalytics,
   getDashboardStats,
 };
+
+export default financialApi;
