@@ -63,6 +63,26 @@ from .inventory import (
     InventoryAnalytics,
 )
 
+# Standalone Items (Memorabilia & Collectibles)
+from .standalone_items import (
+    ItemCategoryCreate,
+    ItemCategoryUpdate,
+    ItemCategoryResponse,
+    StandaloneItemCreate,
+    StandaloneItemUpdate,
+    StandaloneItemResponse,
+    StandaloneItemSummary,
+    StandaloneItemFilters,
+    SportResponse,
+    UnifiedInventoryResponse,
+    ITEM_TYPES,
+    SPORTS,
+    AUTHENTICATORS,
+    MEMORABILIA_TYPES,
+    COLLECTIBLE_TYPES,
+    CONDITIONS,
+)
+
 # Consignments
 from .consignments import (
     ConsignerBase,
@@ -231,6 +251,23 @@ __all__ = [
     "BulkInventoryResult",
     "InventorySummary",
     "InventoryAnalytics",
+    # Standalone Items
+    "ItemCategoryCreate",
+    "ItemCategoryUpdate",
+    "ItemCategoryResponse",
+    "StandaloneItemCreate",
+    "StandaloneItemUpdate",
+    "StandaloneItemResponse",
+    "StandaloneItemSummary",
+    "StandaloneItemFilters",
+    "SportResponse",
+    "UnifiedInventoryResponse",
+    "ITEM_TYPES",
+    "SPORTS",
+    "AUTHENTICATORS",
+    "MEMORABILIA_TYPES",
+    "COLLECTIBLE_TYPES",
+    "CONDITIONS",
     # Consignments
     "ConsignerBase",
     "ConsignerCreate",

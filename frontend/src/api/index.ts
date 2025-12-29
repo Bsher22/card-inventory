@@ -27,6 +27,10 @@ export { checklistsApi } from './checklistsApi';
 export * from './inventoryApi';
 export { inventoryApi } from './inventoryApi';
 
+// Standalone Items API (Memorabilia & Collectibles)
+export * from './standaloneItemsApi';
+export { standaloneItemsApi } from './standaloneItemsApi';
+
 // Consignments API
 export * from './consignmentsApi';
 export { consignmentsApi } from './consignmentsApi';
@@ -59,6 +63,7 @@ import { productsApi } from './productsApi';
 import { playersApi } from './playersApi';
 import { checklistsApi } from './checklistsApi';
 import { inventoryApi } from './inventoryApi';
+import { standaloneItemsApi } from './standaloneItemsApi';
 import { consignmentsApi } from './consignmentsApi';
 import { gradingApi } from './gradingApi';
 import { financialApi } from './financialApi';
@@ -79,6 +84,7 @@ export const api = {
   players: playersApi,
   checklists: checklistsApi,
   inventory: inventoryApi,
+  standaloneItems: standaloneItemsApi,
   consignments: consignmentsApi,
   grading: gradingApi,
   financial: financialApi,

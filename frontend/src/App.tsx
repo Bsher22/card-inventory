@@ -12,6 +12,7 @@ import {
   Send,
   Award,
   Store,
+  Trophy,
 } from 'lucide-react';
 
 // Auth
@@ -32,6 +33,7 @@ import Consigners from './pages/Consigners';
 import Consignments from './pages/Consignments';
 import GradingSubmissions from './pages/GradingSubmissions';
 import EbayImport from './pages/EbayImport';
+import StandaloneItems from './pages/StandaloneItems';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +50,7 @@ const navItems = [
   { to: '/checklists', icon: FileSpreadsheet, label: 'Checklists' },
   { to: '/upload', icon: Upload, label: 'Upload Checklist' },
   { to: '/inventory', icon: BarChart3, label: 'Inventory' },
+  { to: '/memorabilia', icon: Trophy, label: 'Memorabilia' },
   { to: '/consigners', icon: Users, label: 'Consigners' },
   { to: '/consignments', icon: Send, label: 'Consignments' },
   { to: '/grading', icon: Award, label: 'PSA Submissions' },
@@ -156,6 +159,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Inventory />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/memorabilia"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <StandaloneItems />
                   </AppLayout>
                 </ProtectedRoute>
               }

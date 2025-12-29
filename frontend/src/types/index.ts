@@ -24,6 +24,9 @@ export * from './checklists';
 // Inventory
 export * from './inventory';
 
+// Standalone Items (Memorabilia & Collectibles)
+export * from './standaloneItems';
+
 // Consignments
 export * from './consignments';
 

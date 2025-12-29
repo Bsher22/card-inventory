@@ -22,6 +22,9 @@ from .checklists import CardType, Checklist
 # Inventory
 from .inventory import Inventory
 
+# Standalone Items (Memorabilia & Collectibles)
+from .standalone_items import ItemCategory, StandaloneItem, Sport
+
 # Consignments
 from .consignments import Consigner, Consignment, ConsignmentItem
 
@@ -64,6 +67,10 @@ __all__ = [
     "Checklist",
     # Inventory
     "Inventory",
+    # Standalone Items
+    "ItemCategory",
+    "StandaloneItem",
+    "Sport",
     # Consignments
     "Consigner",
     "Consignment",

@@ -21,6 +21,7 @@ from app.routes import (
     grading_router,
     beckett_router,
     card_types_router,
+    standalone_items_router,
 )
 from app.routes.ebay_routes import router as ebay_router
 
@@ -62,6 +63,7 @@ app.include_router(auth_router, prefix="/api", tags=["Authentication"])
 app.include_router(products_router, prefix="/api", tags=["Brands & Product Lines"])
 app.include_router(checklists_router, prefix="/api", tags=["Checklists & Players"])
 app.include_router(inventory_router, prefix="/api", tags=["Inventory"])
+app.include_router(standalone_items_router, prefix="/api", tags=["Standalone Items"])
 app.include_router(financial_router, prefix="/api", tags=["Purchases & Sales"])
 app.include_router(consignments_router, prefix="/api", tags=["Consignments"])
 app.include_router(grading_router, prefix="/api", tags=["Grading Submissions"])
