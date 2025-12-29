@@ -1,21 +1,52 @@
-/**
- * Consignments API Client
- */
+// src/api/consignmentsApi.ts
+// API client for consignment operations
 
 import { apiRequest, buildQueryString } from './base';
 import type {
   Consigner,
   ConsignerCreate,
   ConsignerUpdate,
-  ConsignerStats,
+  ConsignerSummary,
   Consignment,
   ConsignmentCreate,
-  ConsignmentReturn,
-  PendingConsignmentsValue,
-} from '../types';
+  ConsignmentUpdate,
+  ConsignmentItem,
+  ConsignmentItemCreate,
+} from '../types/consignment';
 
 // ============================================
-// CONSIGNERS
+// CONSIGNER STATS TYPE
+// ============================================
+
+export interface ConsignerStats {
+  total_consignments: number;
+  total_cards_sent: number;
+  cards_signed: number;
+  cards_refused: number;
+  cards_pending: number;
+  total_fees_paid: number;
+  success_rate: number;
+}
+
+export interface PendingConsignmentsValue {
+  total_cards_out: number;
+  total_pending_fees: number;
+  consignments_out: number;
+}
+
+export interface ConsignmentReturn {
+  date_returned: string;
+  items: Array<{
+    consignment_item_id: string;
+    status: 'signed' | 'rejected' | 'lost';
+    date_signed?: string;
+    inscription?: string;
+    condition_notes?: string;
+  }>;
+}
+
+// ============================================
+// CONSIGNERS API
 // ============================================
 
 export async function getConsigners(params?: {
@@ -50,7 +81,7 @@ export async function updateConsigner(id: string, data: ConsignerUpdate): Promis
 }
 
 // ============================================
-// CONSIGNMENTS
+// CONSIGNMENTS API
 // ============================================
 
 export async function getConsignments(params?: {
@@ -78,6 +109,13 @@ export async function createConsignment(data: ConsignmentCreate): Promise<Consig
   });
 }
 
+export async function updateConsignment(id: string, data: ConsignmentUpdate): Promise<Consignment> {
+  return apiRequest<Consignment>(`/consignments/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function processConsignmentReturn(id: string, data: ConsignmentReturn): Promise<Consignment> {
   return apiRequest<Consignment>(`/consignments/${id}/return`, {
     method: 'POST',
@@ -92,6 +130,28 @@ export async function markConsignmentFeePaid(id: string, feePaidDate?: string): 
   });
 }
 
+// ============================================
+// CONSIGNMENT ITEMS API
+// ============================================
+
+export async function getConsignmentItems(consignmentId: string): Promise<ConsignmentItem[]> {
+  return apiRequest<ConsignmentItem[]>(`/consignments/${consignmentId}/items`);
+}
+
+export async function addConsignmentItem(
+  consignmentId: string, 
+  data: ConsignmentItemCreate
+): Promise<ConsignmentItem> {
+  return apiRequest<ConsignmentItem>(`/consignments/${consignmentId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ============================================
+// EXPORT BARREL
+// ============================================
+
 export const consignmentsApi = {
   // Consigners
   getConsigners,
@@ -104,6 +164,12 @@ export const consignmentsApi = {
   getConsignment,
   getPendingConsignmentsValue,
   createConsignment,
+  updateConsignment,
   processConsignmentReturn,
   markConsignmentFeePaid,
+  // Items
+  getConsignmentItems,
+  addConsignmentItem,
 };
+
+export default consignmentsApi;

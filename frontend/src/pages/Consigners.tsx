@@ -1,10 +1,32 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, User, DollarSign, Phone, Mail, Package } from 'lucide-react';
-import { api } from '../api';
-import type { Consigner, ConsignerCreate } from '../types';
+// src/pages/Consigners.tsx
+// Updated with address fields for consigners
 
-function formatCurrency(value: number): string {
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Plus, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  DollarSign, 
+  ChevronDown, 
+  ChevronUp,
+  CreditCard,
+  Edit2,
+  Copy,
+  Check
+} from 'lucide-react';
+import { api } from '../api';
+import { 
+  Consigner, 
+  ConsignerCreate, 
+  ConsignerUpdate,
+  US_STATES 
+} from '../types/consignment';
+import { AddressFields, AddressDisplay, AddressInline } from '../components/AddressFields';
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -14,6 +36,7 @@ function formatCurrency(value: number): string {
 export default function Consigners() {
   const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingConsigner, setEditingConsigner] = useState<Consigner | null>(null);
   const [selectedConsigner, setSelectedConsigner] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
 
@@ -21,6 +44,16 @@ export default function Consigners() {
     queryKey: ['consigners', showInactive],
     queryFn: () => api.consignments.getConsigners({ active_only: !showInactive }),
   });
+
+  const handleCreated = () => {
+    setShowCreateModal(false);
+    queryClient.invalidateQueries({ queryKey: ['consigners'] });
+  };
+
+  const handleUpdated = () => {
+    setEditingConsigner(null);
+    queryClient.invalidateQueries({ queryKey: ['consigners'] });
+  };
 
   return (
     <div className="p-8">
@@ -72,6 +105,7 @@ export default function Consigners() {
               onToggle={() => setSelectedConsigner(
                 selectedConsigner === consigner.id ? null : consigner.id
               )}
+              onEdit={() => setEditingConsigner(consigner)}
               onUpdate={() => queryClient.invalidateQueries({ queryKey: ['consigners'] })}
             />
           ))}
@@ -86,141 +120,193 @@ export default function Consigners() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <CreateConsignerModal
+        <ConsignerFormModal
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => {
-            setShowCreateModal(false);
-            queryClient.invalidateQueries({ queryKey: ['consigners'] });
-          }}
+          onSuccess={handleCreated}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editingConsigner && (
+        <ConsignerFormModal
+          consigner={editingConsigner}
+          onClose={() => setEditingConsigner(null)}
+          onSuccess={handleUpdated}
         />
       )}
     </div>
   );
 }
 
-function ConsignerCard({
-  consigner,
-  isExpanded,
-  onToggle,
-  onUpdate,
-}: {
+
+// ============================================
+// CONSIGNER CARD COMPONENT
+// ============================================
+
+interface ConsignerCardProps {
   consigner: Consigner;
   isExpanded: boolean;
   onToggle: () => void;
+  onEdit: () => void;
   onUpdate: () => void;
-}) {
-  const { data: stats } = useQuery({
-    queryKey: ['consigner-stats', consigner.id],
-    queryFn: () => api.consignments.getConsignerStats(consigner.id),
-    enabled: isExpanded,
-  });
+}
 
-  const updateMutation = useMutation({
-    mutationFn: (data: Partial<ConsignerCreate & { is_active: boolean }>) =>
-      api.consignments.updateConsigner(consigner.id, data),
+function ConsignerCard({ consigner, isExpanded, onToggle, onEdit, onUpdate }: ConsignerCardProps) {
+  const [copiedAddress, setCopiedAddress] = useState(false);
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: () => api.consignments.updateConsigner(consigner.id, { 
+      is_active: !consigner.is_active 
+    }),
     onSuccess: onUpdate,
   });
 
+  const handleCopyAddress = async () => {
+    if (consigner.formatted_address) {
+      await navigator.clipboard.writeText(consigner.formatted_address);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    }
+  };
+
   return (
-    <div className={`bg-white rounded-xl border transition-all ${
-      isExpanded ? 'border-blue-200 shadow-md' : 'border-gray-100'
-    }`}>
-      <div className="p-6">
+    <div 
+      className={`bg-white rounded-xl border transition-all ${
+        consigner.is_active 
+          ? 'border-gray-100 hover:border-gray-200' 
+          : 'border-gray-200 bg-gray-50'
+      }`}
+    >
+      {/* Header - Always Visible */}
+      <div 
+        className="p-6 cursor-pointer"
+        onClick={onToggle}
+      >
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              consigner.is_active ? 'bg-blue-100' : 'bg-gray-100'
-            }`}>
-              <User className={consigner.is_active ? 'text-blue-600' : 'text-gray-400'} size={20} />
-            </div>
-            <div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
               <h3 className="font-semibold text-gray-900">{consigner.name}</h3>
-              {consigner.notes && (
-                <p className="text-sm text-gray-500">{consigner.notes}</p>
+              {!consigner.is_active && (
+                <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded">
+                  Inactive
+                </span>
+              )}
+            </div>
+            
+            {/* Location summary */}
+            <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
+              <MapPin size={14} />
+              <AddressInline city={consigner.city} state={consigner.state} />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {consigner.default_fee && (
+              <span className="text-sm font-medium text-green-600">
+                {formatCurrency(Number(consigner.default_fee))}/card
+              </span>
+            )}
+            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded Details */}
+      {isExpanded && (
+        <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-4">
+          {/* Contact Info */}
+          <div className="space-y-2">
+            {consigner.email && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Mail size={14} className="text-gray-400" />
+                <a href={`mailto:${consigner.email}`} className="hover:text-blue-600">
+                  {consigner.email}
+                </a>
+              </div>
+            )}
+            {consigner.phone && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Phone size={14} className="text-gray-400" />
+                <a href={`tel:${consigner.phone}`} className="hover:text-blue-600">
+                  {consigner.phone}
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Shipping Address */}
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="text-xs text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                  <MapPin size={12} />
+                  Shipping Address
+                </div>
+                {consigner.formatted_address ? (
+                  <div className="text-sm text-gray-900 whitespace-pre-line">
+                    {consigner.formatted_address}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400 italic">No address on file</div>
+                )}
+              </div>
+              {consigner.formatted_address && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyAddress();
+                  }}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                  title="Copy address"
+                >
+                  {copiedAddress ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                </button>
               )}
             </div>
           </div>
-          {!consigner.is_active && (
-            <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded">
-              Inactive
-            </span>
-          )}
-        </div>
 
-        <div className="mt-4 space-y-2">
-          {consigner.email && (
-            <p className="text-sm text-gray-600 flex items-center gap-2">
-              <Mail size={14} className="text-gray-400" />
-              {consigner.email}
-            </p>
-          )}
-          {consigner.phone && (
-            <p className="text-sm text-gray-600 flex items-center gap-2">
-              <Phone size={14} className="text-gray-400" />
-              {consigner.phone}
-            </p>
-          )}
-          {/* FIXED: Changed from default_fee_per_card to default_fee */}
-          {(consigner.default_fee ?? 0) > 0 && (
-            <p className="text-sm text-gray-600 flex items-center gap-2">
-              <DollarSign size={14} className="text-gray-400" />
-              {formatCurrency(consigner.default_fee ?? 0)} per card
-            </p>
-          )}
-        </div>
-
-        <button
-          onClick={onToggle}
-          className="mt-4 w-full py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-        >
-          {isExpanded ? 'Hide Details' : 'View Stats & History'}
-        </button>
-      </div>
-
-      {/* Expanded Stats */}
-      {isExpanded && stats && (
-        <div className="border-t border-gray-100 p-6 bg-gray-50">
-          <h4 className="font-medium text-gray-900 mb-4">Performance Stats</h4>
-          
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-500">Consignments</p>
-              <p className="text-lg font-bold text-gray-900">{stats.total_consignments}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-500">Cards Sent</p>
-              <p className="text-lg font-bold text-gray-900">{stats.total_cards_sent}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-500">Cards Signed</p>
-              {/* FIXED: Changed from total_cards_returned to cards_signed */}
-              <p className="text-lg font-bold text-green-600">{stats.cards_signed}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-500">Success Rate</p>
-              <p className="text-lg font-bold text-blue-600">{stats.success_rate}%</p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg">
-            <span className="text-sm text-gray-600">Total Fees Paid</span>
-            <span className="font-bold text-gray-900">{formatCurrency(stats.total_fees_paid)}</span>
-          </div>
-
-          {/* FIXED: Changed from pending_cards to cards_pending */}
-          {stats.cards_pending > 0 && (
-            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-700">
-                <Package size={14} className="inline mr-1" />
-                {stats.cards_pending} cards currently out
-              </p>
+          {/* Payment Info */}
+          {(consigner.payment_method || consigner.payment_details) && (
+            <div className="space-y-1">
+              <div className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                <CreditCard size={12} />
+                Payment
+              </div>
+              {consigner.payment_method && (
+                <div className="text-sm text-gray-700">{consigner.payment_method}</div>
+              )}
+              {consigner.payment_details && (
+                <div className="text-sm text-gray-500">{consigner.payment_details}</div>
+              )}
             </div>
           )}
 
-          <div className="mt-4 flex gap-2">
+          {/* Notes */}
+          {consigner.notes && (
+            <div className="text-sm text-gray-600 bg-yellow-50 p-2 rounded">
+              {consigner.notes}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
             <button
-              onClick={() => updateMutation.mutate({ is_active: !consigner.is_active })}
-              className={`flex-1 py-2 text-sm rounded-lg transition-colors ${
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              <Edit2 size={14} />
+              Edit
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleActiveMutation.mutate();
+              }}
+              disabled={toggleActiveMutation.isPending}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 consigner.is_active
                   ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -235,128 +321,295 @@ function ConsignerCard({
   );
 }
 
-function CreateConsignerModal({
-  onClose,
-  onCreated,
-}: {
+
+// ============================================
+// CONSIGNER FORM MODAL (Create/Edit)
+// ============================================
+
+interface ConsignerFormModalProps {
+  consigner?: Consigner;
   onClose: () => void;
-  onCreated: () => void;
-}) {
-  {/* FIXED: Changed from default_fee_per_card to default_fee */}
+  onSuccess: () => void;
+}
+
+function ConsignerFormModal({ consigner, onClose, onSuccess }: ConsignerFormModalProps) {
+  const isEditing = !!consigner;
+  
   const [formData, setFormData] = useState<ConsignerCreate>({
-    name: '',
-    email: '',
-    phone: '',
-    default_fee: 0,
-    payment_method: '',
-    notes: '',
+    name: consigner?.name || '',
+    email: consigner?.email || '',
+    phone: consigner?.phone || '',
+    street_address: consigner?.street_address || '',
+    city: consigner?.city || '',
+    state: consigner?.state || '',
+    postal_code: consigner?.postal_code || '',
+    country: consigner?.country || 'USA',
+    location: consigner?.location || '',
+    default_fee: consigner?.default_fee ? Number(consigner.default_fee) : undefined,
+    payment_method: consigner?.payment_method || '',
+    payment_details: consigner?.payment_details || '',
+    notes: consigner?.notes || '',
+    is_active: consigner?.is_active ?? true,
   });
+  
   const [error, setError] = useState('');
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: (data: ConsignerCreate) => api.consignments.createConsigner(data),
-    onSuccess: onCreated,
+    onSuccess,
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: ConsignerUpdate) => api.consignments.updateConsigner(consigner!.id, data),
+    onSuccess,
     onError: (err: Error) => setError(err.message),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name) {
+    setError('');
+    
+    if (!formData.name.trim()) {
       setError('Name is required');
       return;
     }
-    mutation.mutate(formData);
+
+    if (isEditing) {
+      updateMutation.mutate(formData);
+    } else {
+      createMutation.mutate(formData);
+    }
   };
 
+  const handleAddressChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Add Consigner</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 rounded-t-xl">
+          <h2 className="text-xl font-bold text-gray-900">
+            {isEditing ? 'Edit Consigner' : 'Add Consigner'}
+          </h2>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Basic Info Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-gray-700 border-b pb-1">Basic Information</h3>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name <span className="text-red-500">*</span>
+              </label>
               <input
-                type="email"
-                value={formData.email || ''}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="John Smith"
+                required
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={formData.email || ''}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="john@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={formData.phone || ''}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Address Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-gray-700 border-b pb-1">Shipping Address</h3>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
               <input
-                type="tel"
-                value={formData.phone || ''}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                type="text"
+                value={formData.street_address || ''}
+                onChange={(e) => setFormData({ ...formData, street_address: e.target.value })}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="123 Main St, Suite 100"
+              />
+            </div>
+
+            <div className="grid grid-cols-6 gap-3">
+              <div className="col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input
+                  type="text"
+                  value={formData.city || ''}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="City"
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                <select
+                  value={formData.state || ''}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">--</option>
+                  {US_STATES.map((state) => (
+                    <option key={state.value} value={state.value}>
+                      {state.value}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">ZIP</label>
+                <input
+                  type="text"
+                  value={formData.postal_code || ''}
+                  onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="12345"
+                  maxLength={10}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+              <input
+                type="text"
+                value={formData.country || 'USA'}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="USA"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location Label
+                <span className="text-gray-400 font-normal ml-1">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={formData.location || ''}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., Home, Office, Spring Training"
+              />
+              <p className="text-xs text-gray-400 mt-1">A label to identify this address</p>
+            </div>
+          </div>
+
+          {/* Payment Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-gray-700 border-b pb-1">Fee & Payment</h3>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Default Fee per Card</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.default_fee ?? ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    default_fee: e.target.value ? parseFloat(e.target.value) : undefined 
+                  })}
+                  className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+              <select
+                value={formData.payment_method || ''}
+                onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select method...</option>
+                <option value="Venmo">Venmo</option>
+                <option value="PayPal">PayPal</option>
+                <option value="Zelle">Zelle</option>
+                <option value="Check">Check</option>
+                <option value="Cash">Cash</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Details</label>
+              <input
+                type="text"
+                value={formData.payment_details || ''}
+                onChange={(e) => setFormData({ ...formData, payment_details: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., @venmo-handle, paypal@email.com"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Default Fee (per card)</label>
-            {/* FIXED: Changed from default_fee_per_card to default_fee */}
-            <input
-              type="number"
-              step="0.01"
-              value={formData.default_fee || ''}
-              onChange={(e) => setFormData({ ...formData, default_fee: parseFloat(e.target.value) || 0 })}
-              placeholder="e.g., 15.00"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-            <input
-              type="text"
-              value={formData.payment_method || ''}
-              onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-              placeholder="Venmo, PayPal, etc."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
+          {/* Notes Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea
               value={formData.notes || ''}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={2}
-              placeholder="Location, special arrangements, etc."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="Any additional notes about this consigner..."
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-
-          <div className="flex gap-3 pt-4">
+          {/* Form Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isPending}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={mutation.isPending}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              disabled={isPending}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {mutation.isPending ? 'Creating...' : 'Create'}
+              {isPending 
+                ? (isEditing ? 'Saving...' : 'Creating...') 
+                : (isEditing ? 'Save Changes' : 'Add Consigner')
+              }
             </button>
           </div>
         </form>
