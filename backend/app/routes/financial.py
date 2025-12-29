@@ -32,7 +32,7 @@ from app.schemas.financial import (
     SalesAnalytics, PurchaseAnalytics, DashboardStats,
     CARD_TYPE_OPTIONS, PARALLEL_OPTIONS, PLATFORM_OPTIONS, GRADE_COMPANY_OPTIONS
 )
-from app.utils.auth import get_current_user
+from app.dependencies.auth import get_current_user
 
 router = APIRouter(tags=["financial"])
 
