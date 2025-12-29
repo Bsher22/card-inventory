@@ -479,9 +479,9 @@ export default function EbayImport() {
   // ============================================
   
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="p-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">eBay Sales Import</h1>
         <p className="text-gray-600">
           Upload your eBay Listings & Sales Report to import sales data
