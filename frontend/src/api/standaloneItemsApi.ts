@@ -58,7 +58,7 @@ export async function getSports(): Promise<Sport[]> {
 // ============================================
 
 export async function getStandaloneItems(filters?: StandaloneItemFilters): Promise<StandaloneItem[]> {
-  const query = filters ? buildQueryString(filters) : '';
+  const query = filters ? buildQueryString(filters as Record<string, unknown>) : '';
   return apiRequest<StandaloneItem[]>(`/standalone-items${query}`);
 }
 
@@ -68,7 +68,7 @@ export async function getStandaloneItemsSummary(params?: {
   search?: string;
   limit?: number;
 }): Promise<StandaloneItemSummary[]> {
-  const query = params ? buildQueryString(params) : '';
+  const query = params ? buildQueryString(params as Record<string, unknown>) : '';
   return apiRequest<StandaloneItemSummary[]>(`/standalone-items/summary${query}`);
 }
 
