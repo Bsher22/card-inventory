@@ -12,7 +12,7 @@ import type {
   ConsignmentUpdate,
   ConsignmentItem,
   ConsignmentItemCreate,
-} from '../types/consignment';
+} from '../types';
 
 // ============================================
 // CONSIGNER STATS TYPE

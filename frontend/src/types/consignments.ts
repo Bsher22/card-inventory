@@ -123,6 +123,7 @@ export interface ConsignmentUpdate {
 export interface Consignment extends ConsignmentBase {
   id: string;
   consigner?: ConsignerSummary | null;
+  items?: ConsignmentItem[];
   created_at: string;
   updated_at: string;
 }

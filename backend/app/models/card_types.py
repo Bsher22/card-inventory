@@ -1,13 +1,17 @@
+# app/models/card_types.py
 """
 Card Types and Parallels Models
-CardBaseType, ParallelCategory, Parallel, CardPrefixMapping
+SQLAlchemy models for card base types, parallel categories, and parallels
 """
 
+import uuid
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
-import uuid
 
-from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, UniqueConstraint, Index
+from sqlalchemy import (
+    String, Integer, Boolean, Text, DateTime,
+    ForeignKey, UniqueConstraint
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -18,6 +22,10 @@ if TYPE_CHECKING:
     from .checklists import Checklist
     from .inventory import Inventory
 
+
+# ============================================
+# CARD BASE TYPES
+# ============================================
 
 class CardBaseType(Base):
     """
@@ -50,6 +58,10 @@ class CardBaseType(Base):
         return f"<CardBaseType(name='{self.name}')>"
 
 
+# ============================================
+# PARALLEL CATEGORIES
+# ============================================
+
 class ParallelCategory(Base):
     """Categories to group parallels: Core, Patterned, Shimmer/Wave, etc."""
     __tablename__ = "parallel_categories"
@@ -70,6 +82,10 @@ class ParallelCategory(Base):
         return f"<ParallelCategory(name='{self.name}')>"
 
 
+# ============================================
+# PARALLELS
+# ============================================
+
 class Parallel(Base):
     """All parallel types: Refractor, Purple /250, Gold /50, SuperFractor 1/1, etc."""
     __tablename__ = "parallels"
@@ -83,7 +99,7 @@ class Parallel(Base):
     )
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     short_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    print_run: Mapped[Optional[int]] = mapped_column(Integer)  # NULL = unnumbered
+    numbered_to: Mapped[Optional[int]] = mapped_column(Integer)  # NULL = unnumbered, 1 = 1/1
     is_numbered: Mapped[bool] = mapped_column(Boolean, default=True)
     is_one_of_one: Mapped[bool] = mapped_column(Boolean, default=False)
     pattern_description: Mapped[Optional[str]] = mapped_column(Text)
@@ -103,16 +119,20 @@ class Parallel(Base):
 
     @property
     def display_name(self) -> str:
-        """Returns display-friendly name with print run"""
-        if self.print_run == 1:
+        """Returns display-friendly name with numbering"""
+        if self.numbered_to == 1:
             return f"{self.short_name} 1/1"
-        elif self.print_run:
-            return f"{self.short_name} /{self.print_run}"
+        elif self.numbered_to:
+            return f"{self.short_name} /{self.numbered_to}"
         return self.short_name
 
     def __repr__(self) -> str:
-        return f"<Parallel(name='{self.name}', print_run={self.print_run})>"
+        return f"<Parallel(name='{self.name}', numbered_to={self.numbered_to})>"
 
+
+# ============================================
+# CARD PREFIX MAPPINGS
+# ============================================
 
 class CardPrefixMapping(Base):
     """
@@ -131,15 +151,9 @@ class CardPrefixMapping(Base):
     product_type: Mapped[str] = mapped_column(String(50), nullable=False)
     card_type: Mapped[str] = mapped_column(String(50), nullable=False)
     is_autograph: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_prospect: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_prospect: Mapped[bool] = mapped_column(Boolean, default=False)
     base_type_name: Mapped[Optional[str]] = mapped_column(String(50))
     notes: Mapped[Optional[str]] = mapped_column(Text)
 
     def __repr__(self) -> str:
         return f"<CardPrefixMapping(prefix='{self.prefix}', product='{self.product_type}')>"
-
-
-# Index definitions
-Index('idx_parallels_category', Parallel.category_id)
-Index('idx_parallels_print_run', Parallel.print_run)
-Index('idx_parallels_sort', Parallel.sort_order)

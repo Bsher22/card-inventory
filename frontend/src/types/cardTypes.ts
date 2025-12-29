@@ -65,7 +65,7 @@ export interface Parallel {
   category_id: string | null;
   name: string;
   short_name: string;
-  print_run: number | null;
+  numbered_to: number | null;  // NULL = unnumbered, 1 = 1/1
   is_numbered: boolean;
   is_one_of_one: boolean;
   pattern_description: string | null;
@@ -80,7 +80,7 @@ export interface ParallelCreate {
   category_id?: string | null;
   name: string;
   short_name: string;
-  print_run?: number | null;
+  numbered_to?: number | null;
   is_numbered?: boolean;
   is_one_of_one?: boolean;
   pattern_description?: string | null;
@@ -93,7 +93,7 @@ export interface ParallelUpdate {
   category_id?: string | null;
   name?: string;
   short_name?: string;
-  print_run?: number | null;
+  numbered_to?: number | null;
   is_numbered?: boolean;
   is_one_of_one?: boolean;
   pattern_description?: string | null;
@@ -142,8 +142,8 @@ export interface CardPrefixMappingCreate {
 export interface ParallelFilter {
   category_id?: string;
   is_numbered?: boolean;
-  max_print_run?: number;
-  min_print_run?: number;
+  max_numbered_to?: number;
+  min_numbered_to?: number;
   year_introduced?: number;
   search?: string;
   [key: string]: string | number | boolean | undefined;  // Index signature for buildQueryString
@@ -202,8 +202,8 @@ export interface BulkChecklistImportResult {
  */
 export function getParallelDisplayName(parallel: Parallel): string {
   if (parallel.display_name) return parallel.display_name;
-  if (parallel.print_run === 1) return `${parallel.short_name} 1/1`;
-  if (parallel.print_run) return `${parallel.short_name} /${parallel.print_run}`;
+  if (parallel.numbered_to === 1) return `${parallel.short_name} 1/1`;
+  if (parallel.numbered_to) return `${parallel.short_name} /${parallel.numbered_to}`;
   return parallel.short_name;
 }
 
@@ -220,10 +220,10 @@ export function formatCardDisplay(
 
   if (parallel) {
     display += ` ${parallel.short_name}`;
-    if (parallel.print_run && serialNumber) {
-      display += ` ${serialNumber}/${parallel.print_run}`;
-    } else if (parallel.print_run) {
-      display += ` /${parallel.print_run}`;
+    if (parallel.numbered_to && serialNumber) {
+      display += ` ${serialNumber}/${parallel.numbered_to}`;
+    } else if (parallel.numbered_to) {
+      display += ` /${parallel.numbered_to}`;
     }
   }
 

@@ -17,13 +17,13 @@ import {
   Check
 } from 'lucide-react';
 import { api } from '../api';
-import { 
+import type { 
   Consigner, 
   ConsignerCreate, 
   ConsignerUpdate,
-  US_STATES 
-} from '../types/consignment';
-import { AddressFields, AddressDisplay, AddressInline } from '../components/AddressFields';
+} from '../types';
+import { US_STATES } from '../types';
+import { AddressDisplay, AddressInline } from '../components/AddressFields';
 
 function formatCurrency(value: number | null | undefined): string {
   if (value == null) return '—';
@@ -480,7 +480,7 @@ function ConsignerFormModal({ consigner, onClose, onSuccess }: ConsignerFormModa
                   className="w-full border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">--</option>
-                  {US_STATES.map((state) => (
+                  {US_STATES.map((state: { value: string; label: string }) => (
                     <option key={state.value} value={state.value}>
                       {state.value}
                     </option>

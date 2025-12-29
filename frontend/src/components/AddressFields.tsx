@@ -2,7 +2,7 @@
 // Reusable address form fields component
 
 import React from 'react';
-import { US_STATES } from '../types/consignment';
+import { US_STATES } from '../types';
 
 interface AddressData {
   street_address?: string | null;
@@ -88,7 +88,7 @@ export const AddressFields: React.FC<AddressFieldsProps> = ({
                        disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <option value="">--</option>
-            {US_STATES.map((state) => (
+            {US_STATES.map((state: { value: string; label: string }) => (
               <option key={state.value} value={state.value}>
                 {state.value}
               </option>
