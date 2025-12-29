@@ -2,6 +2,9 @@
 eBay Sales Import Routes
 
 Endpoints for uploading, previewing, and importing eBay sales data.
+
+UPDATED: Now creates records in BOTH ebay_listing_sales AND unified sales table
+so that imported eBay data appears on the main Sales page.
 """
 from decimal import Decimal
 from typing import Optional
@@ -13,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import EbayImportBatch, EbayListingSale
+from app.models import EbayImportBatch, EbayListingSale, Sale, SaleItem
 from app.schemas.ebay import (
     EbayImportBatchDetail,
     EbayImportBatchRead,
@@ -57,7 +60,7 @@ async def preview_ebay_upload(
 
 
 # ============================================
-# Import Selected Listings
+# Import Selected Listings (UNIFIED)
 # ============================================
 
 @router.post("/import", response_model=EbayImportResponse)
@@ -67,15 +70,22 @@ async def import_ebay_sales(
 ):
     """
     Import selected listings from previewed eBay data.
-    Creates an import batch and individual listing records.
+    
+    Creates records in:
+    - ebay_import_batches (batch metadata)
+    - ebay_listing_sales (detailed eBay data)
+    - sales (unified sales table for Sales page)
+    - sale_items (line items for each sale)
     """
     if not request.listings:
         raise HTTPException(status_code=400, detail="No listings to import")
     
+    # Calculate batch totals
     total_quantity = sum(l.quantity_sold for l in request.listings)
     total_item_sales = sum(l.item_sales for l in request.listings)
     total_net_sales = sum(l.net_sales for l in request.listings)
     
+    # Create the import batch
     batch = EbayImportBatch(
         report_start_date=request.report_start_date,
         report_end_date=request.report_end_date,
@@ -86,10 +96,12 @@ async def import_ebay_sales(
         notes=request.notes,
     )
     db.add(batch)
-    await db.flush()
+    await db.flush()  # Get the batch ID
     
+    # Process each listing
     for listing_data in request.listings:
-        listing = EbayListingSale(
+        # 1. Create EbayListingSale record (detailed eBay data)
+        ebay_listing = EbayListingSale(
             import_batch_id=batch.id,
             listing_title=listing_data.listing_title,
             ebay_item_id=listing_data.ebay_item_id,
@@ -122,7 +134,42 @@ async def import_ebay_sales(
             quantity_via_best_offer=listing_data.quantity_via_best_offer,
             quantity_via_seller_offer=listing_data.quantity_via_seller_offer,
         )
-        db.add(listing)
+        db.add(ebay_listing)
+        await db.flush()  # Get the ebay_listing ID
+        
+        # 2. Create Sale record (unified sales table)
+        sale = Sale(
+            sale_date=request.report_end_date,
+            platform="eBay",
+            order_number=listing_data.ebay_item_id,
+            gross_amount=listing_data.total_sales,
+            shipping_collected=listing_data.shipping_collected,
+            shipping_cost=listing_data.shipping_label_cost,
+            platform_fees=listing_data.total_selling_costs,
+            payment_fees=Decimal("0"),  # Included in total_selling_costs for eBay
+            net_amount=listing_data.net_sales,
+            notes=listing_data.listing_title,  # Store listing title for reference
+            ebay_listing_sale_id=ebay_listing.id,
+            source="ebay_import",
+        )
+        db.add(sale)
+        await db.flush()  # Get the sale ID
+        
+        # 3. Create SaleItem record
+        avg_price = (
+            listing_data.item_sales / listing_data.quantity_sold 
+            if listing_data.quantity_sold > 0 
+            else Decimal("0")
+        )
+        
+        sale_item = SaleItem(
+            sale_id=sale.id,
+            checklist_id=None,  # No card-level linkage for eBay aggregate data
+            quantity=listing_data.quantity_sold,
+            sale_price=avg_price,
+            cost_basis=None,  # Unknown without inventory linkage
+        )
+        db.add(sale_item)
     
     await db.commit()
     
@@ -180,7 +227,10 @@ async def delete_import_batch(
     batch_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete an import batch and all its listings."""
+    """
+    Delete an import batch and all its listings.
+    Also removes the corresponding unified sales records.
+    """
     result = await db.execute(
         select(EbayImportBatch).where(EbayImportBatch.id == batch_id)
     )
@@ -189,6 +239,21 @@ async def delete_import_batch(
     if not batch:
         raise HTTPException(status_code=404, detail="Import batch not found")
     
+    # Get all ebay_listing_sale IDs for this batch
+    listing_ids_result = await db.execute(
+        select(EbayListingSale.id).where(EbayListingSale.import_batch_id == batch_id)
+    )
+    listing_ids = [row[0] for row in listing_ids_result.all()]
+    
+    # Delete unified sales records linked to these listings
+    if listing_ids:
+        sales_result = await db.execute(
+            select(Sale).where(Sale.ebay_listing_sale_id.in_(listing_ids))
+        )
+        for sale in sales_result.scalars().all():
+            await db.delete(sale)
+    
+    # Delete the batch (cascades to ebay_listing_sales)
     await db.delete(batch)
     await db.commit()
     

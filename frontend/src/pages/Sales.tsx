@@ -28,11 +28,12 @@ import type {
 // UTILITY FUNCTIONS
 // ============================================
 
-function formatCurrency(value: number): string {
+function formatCurrency(value: number | string | null | undefined): string {
+  const num = typeof value === 'string' ? parseFloat(value) : (value ?? 0);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-  }).format(value);
+  }).format(num);
 }
 
 function formatDate(dateStr: string): string {
@@ -752,7 +753,7 @@ function SaleFormModal({ isOpen, onClose, onSuccess }: SaleFormModalProps) {
 }
 
 // ============================================
-// SALE CARD COMPONENT
+// SALE CARD COMPONENT - UPDATED FOR EBAY IMPORTS
 // ============================================
 
 interface SaleCardProps {
@@ -765,6 +766,9 @@ function SaleCard({ sale, isExpanded, onToggle }: SaleCardProps) {
   const totalCards = sale.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
   const totalCostBasis = sale.items?.reduce((sum, i) => sum + (i.cost_basis || 0), 0) || 0;
   const profit = sale.net_amount - totalCostBasis;
+
+  // Check if this is an eBay import
+  const isEbayImport = sale.source === 'ebay_import';
 
   return (
     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
@@ -782,7 +786,13 @@ function SaleCard({ sale, isExpanded, onToggle }: SaleCardProps) {
           <div className="text-left">
             <div className="flex items-center gap-2">
               <Store size={16} className="text-gray-400" />
-              <span className="font-medium text-gray-900">{sale.platform}</span>
+              <span className="font-medium text-gray-900">{sale.platform || 'Direct Sale'}</span>
+              {/* Show "Imported" badge for eBay imports */}
+              {isEbayImport && (
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                  Imported
+                </span>
+              )}
               {sale.buyer_name && (
                 <span className="text-sm text-gray-500">to {sale.buyer_name}</span>
               )}
@@ -814,60 +824,100 @@ function SaleCard({ sale, isExpanded, onToggle }: SaleCardProps) {
       </button>
 
       {/* Expanded Content */}
-      {isExpanded && sale.items && sale.items.length > 0 && (
+      {isExpanded && (
         <div className="border-t bg-gray-50">
-          <table className="w-full">
-            <thead>
-              <tr className="text-xs text-gray-500 uppercase">
-                <th className="px-4 py-2 text-left">Card</th>
-                <th className="px-3 py-2 text-center">Qty</th>
-                <th className="px-3 py-2 text-right">Sale Price</th>
-                <th className="px-3 py-2 text-right">Cost Basis</th>
-                <th className="px-3 py-2 text-right">Profit</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {sale.items.map((item) => {
-                const itemProfit = item.sale_price * item.quantity - (item.cost_basis || 0);
-                return (
-                  <tr key={item.id} className="hover:bg-white">
-                    <td className="px-4 py-2">
-                      <div className="font-medium text-gray-900">
-                        #{item.checklist?.card_number} - {item.checklist?.player_name_raw}
-                      </div>
-                      <div className="text-xs text-gray-500">{item.checklist?.set_name}</div>
-                    </td>
-                    <td className="px-3 py-2 text-center text-gray-600">{item.quantity}</td>
-                    <td className="px-3 py-2 text-right text-gray-600">
-                      {formatCurrency(item.sale_price)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-gray-500">
-                      {item.cost_basis ? formatCurrency(item.cost_basis) : '-'}
-                    </td>
-                    <td
-                      className={`px-3 py-2 text-right font-medium ${
-                        itemProfit >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {itemProfit >= 0 ? '+' : ''}
-                      {formatCurrency(itemProfit)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="bg-gray-100 font-medium">
-                <td colSpan={2} className="px-4 py-2 text-gray-700">
-                  Fees: Platform {formatCurrency(sale.platform_fees)} / Payment{' '}
-                  {formatCurrency(sale.payment_fees)} / Shipping {formatCurrency(sale.shipping_cost)}
-                </td>
-                <td colSpan={3} className="px-3 py-2 text-right text-gray-900">
-                  Net: {formatCurrency(sale.net_amount)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+          {/* Show listing title for eBay imports */}
+          {isEbayImport && sale.notes && (
+            <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
+              <div className="text-xs text-blue-600 font-medium mb-1">Listing Title</div>
+              <div className="text-sm text-gray-700">{sale.notes}</div>
+            </div>
+          )}
+
+          {/* Items Table */}
+          {sale.items && sale.items.length > 0 && (
+            <table className="w-full">
+              <thead>
+                <tr className="text-xs text-gray-500 uppercase">
+                  <th className="px-4 py-2 text-left">Card</th>
+                  <th className="px-3 py-2 text-center">Qty</th>
+                  <th className="px-3 py-2 text-right">Sale Price</th>
+                  <th className="px-3 py-2 text-right">Cost Basis</th>
+                  <th className="px-3 py-2 text-right">Profit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {sale.items.map((item) => {
+                  const itemProfit = item.sale_price * item.quantity - (item.cost_basis || 0);
+                  return (
+                    <tr key={item.id} className="hover:bg-white">
+                      {/* Card - UPDATED: Handle null checklist_id for eBay imports */}
+                      <td className="px-4 py-2">
+                        {item.checklist_id && item.checklist ? (
+                          <>
+                            <div className="font-medium text-gray-900">
+                              #{item.checklist.card_number} - {item.checklist.player_name_raw}
+                            </div>
+                            <div className="text-xs text-gray-500">{item.checklist.set_name}</div>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2 text-gray-500 italic">
+                            <Package size={14} />
+                            <span>eBay Listing</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-center text-gray-600">{item.quantity}</td>
+                      <td className="px-3 py-2 text-right text-gray-600">
+                        {formatCurrency(item.sale_price)}
+                      </td>
+                      <td className="px-3 py-2 text-right text-gray-500">
+                        {item.cost_basis ? formatCurrency(item.cost_basis) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td
+                        className={`px-3 py-2 text-right font-medium ${
+                          item.cost_basis === null
+                            ? 'text-gray-400'
+                            : itemProfit >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {item.cost_basis !== null ? (
+                          <>
+                            {itemProfit >= 0 ? '+' : ''}
+                            {formatCurrency(itemProfit)}
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-100 font-medium">
+                  <td colSpan={2} className="px-4 py-2 text-gray-700">
+                    Fees: Platform {formatCurrency(sale.platform_fees)} / Payment{' '}
+                    {formatCurrency(sale.payment_fees)} / Shipping {formatCurrency(sale.shipping_cost)}
+                  </td>
+                  <td colSpan={3} className="px-3 py-2 text-right text-gray-900">
+                    Net: {formatCurrency(sale.net_amount)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* Empty items state */}
+          {(!sale.items || sale.items.length === 0) && (
+            <div className="px-4 py-8 text-center text-gray-500">
+              No items recorded
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1005,7 +1055,7 @@ export default function Sales() {
         <div className="text-center py-12 bg-white rounded-lg border">
           <DollarSign className="mx-auto text-gray-400 mb-3" size={48} />
           <h3 className="text-lg font-medium text-gray-900 mb-1">No sales yet</h3>
-          <p className="text-gray-500 mb-4">Record your first sale to start tracking profit</p>
+          <p className="text-gray-500 mb-4">Record your first sale or import from eBay to start tracking profit</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"

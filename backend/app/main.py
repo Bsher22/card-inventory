@@ -23,7 +23,9 @@ from app.routes import (
     card_types_router,
     standalone_items_router,
 )
-from app.routes.ebay_routes import router as ebay_router
+# eBay routes - two separate routers for different functionality
+from app.routes.ebay_routes import router as ebay_import_router  # Sales import
+from app.routes.ebay import router as ebay_listing_router  # Listing generation
 
 settings = get_settings()
 
@@ -67,7 +69,11 @@ app.include_router(standalone_items_router, prefix="/api", tags=["Standalone Ite
 app.include_router(financial_router, prefix="/api", tags=["Purchases & Sales"])
 app.include_router(consignments_router, prefix="/api", tags=["Consignments"])
 app.include_router(grading_router, prefix="/api", tags=["Grading Submissions"])
-app.include_router(ebay_router, prefix="/api", tags=["eBay Sales Import"])
+
+# eBay routers
+app.include_router(ebay_import_router, prefix="/api", tags=["eBay Sales Import"])
+app.include_router(ebay_listing_router, prefix="/api", tags=["eBay Listing Generation"])
+
 app.include_router(beckett_router)  # Beckett Import (has own /api/beckett prefix)
 app.include_router(card_types_router)  # Card Types, Parallels & PDF Parsing
 
