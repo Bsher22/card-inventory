@@ -36,6 +36,8 @@ class InventoryService:
         player_id: Optional[UUID] = None,
         brand_id: Optional[UUID] = None,
         in_stock_only: bool = True,
+        is_signed: Optional[bool] = None,
+        is_slabbed: Optional[bool] = None,
         search: Optional[str] = None,
     ) -> list[InventoryWithCard]:
         """Get all inventory items with optional filters."""
@@ -64,6 +66,12 @@ class InventoryService:
 
         if brand_id:
             query = query.join(ProductLine).where(ProductLine.brand_id == brand_id)
+
+        if is_signed is not None:
+            query = query.where(Inventory.is_signed == is_signed)
+
+        if is_slabbed is not None:
+            query = query.where(Inventory.is_slabbed == is_slabbed)
 
         if search:
             search_term = f"%{search}%"
