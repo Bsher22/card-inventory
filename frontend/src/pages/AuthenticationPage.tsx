@@ -5,8 +5,8 @@
  * with tabs for Cards, Memorabilia, and Collectibles
  */
 
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Plus, 
   Package, 
@@ -21,13 +21,23 @@ import {
   Pen,
 } from 'lucide-react';
 
-import { signatureAuthApi } from '@/api/gradingApi';
-import type { AuthSubmission, AuthItem, AuthStats, AuthItemType } from '@/types';
-import { formatCurrency, formatDate } from '@/utils/format';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { signatureAuthApi } from '../api/gradingApi';
+import type { AuthSubmission, AuthItem, AuthStats, AuthItemType } from '../types';
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value);
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 // Status badge colors
 const statusColors: Record<string, string> = {
@@ -54,7 +64,6 @@ export default function AuthenticationPage() {
   const [activeTab, setActiveTab] = useState<AuthItemType>('card');
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const queryClient = useQueryClient();
 
   // Fetch stats
   const { data: stats } = useQuery({
@@ -91,178 +100,177 @@ export default function AuthenticationPage() {
   });
 
   // Get items for current tab
-  const currentItems = {
+  const itemsMap: Record<AuthItemType, AuthItem[]> = {
     card: cardItems,
     memorabilia: memorabiliaItems,
     collectible: collectibleItems,
-  }[activeTab];
+  };
+  const currentItems = itemsMap[activeTab];
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Authentication</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Authentication</h1>
           <p className="text-gray-500">PSA/DNA & JSA signature verification</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
           New Submission
-        </Button>
+        </button>
       </div>
 
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Out for Auth</p>
-                  <p className="text-2xl font-bold">{stats.items_out_for_auth}</p>
-                </div>
-                <Package className="h-8 w-8 text-blue-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Out for Auth</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.items_out_for_auth}</p>
               </div>
-            </CardContent>
-          </Card>
+              <Package className="h-8 w-8 text-blue-500" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pending Fees</p>
-                  <p className="text-2xl font-bold">{formatCurrency(stats.pending_fees)}</p>
-                </div>
-                <Pen className="h-8 w-8 text-green-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Pending Fees</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.pending_fees)}</p>
               </div>
-            </CardContent>
-          </Card>
+              <Pen className="h-8 w-8 text-green-500" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Authenticated</p>
-                  <p className="text-2xl font-bold">{stats.total_authenticated}</p>
-                </div>
-                <Shield className="h-8 w-8 text-purple-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Authenticated</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total_authenticated}</p>
               </div>
-            </CardContent>
-          </Card>
+              <Shield className="h-8 w-8 text-purple-500" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pass Rate</p>
-                  <p className="text-2xl font-bold">{stats.pass_rate}%</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Pass Rate</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.pass_rate}%</p>
               </div>
-            </CardContent>
-          </Card>
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
+          </div>
         </div>
       )}
 
       {/* Pending by Company */}
       {pendingByCompany.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Pending by Company</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {pendingByCompany.map((company) => (
-                <div 
-                  key={company.company_id} 
-                  className="p-4 border rounded-lg flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-full">
-                      <Shield className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{company.company_name}</p>
-                      <p className="text-sm text-gray-500">
-                        {company.pending_count} item{company.pending_count !== 1 ? 's' : ''} pending
-                      </p>
-                    </div>
+        <div className="bg-white border border-gray-100 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending by Company</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pendingByCompany.map((company) => (
+              <div 
+                key={company.company_id} 
+                className="p-4 border rounded-lg flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-full">
+                    <Shield className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(company.pending_value)}</p>
-                    {company.oldest_submission_date && (
-                      <p className="text-xs text-gray-400">
-                        Since {formatDate(company.oldest_submission_date)}
-                      </p>
-                    )}
+                  <div>
+                    <p className="font-semibold text-gray-900">{company.company_name}</p>
+                    <p className="text-sm text-gray-500">
+                      {company.pending_count} item{company.pending_count !== 1 ? 's' : ''} pending
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="text-right">
+                  <p className="font-medium text-gray-900">{formatCurrency(company.pending_value)}</p>
+                  {company.oldest_submission_date && (
+                    <p className="text-xs text-gray-400">
+                      Since {formatDate(company.oldest_submission_date)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Item Type Tabs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Items by Category</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AuthItemType)}>
-            <TabsList className="grid grid-cols-3 w-full max-w-md">
-              <TabsTrigger value="card" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Cards ({cardItems.length})
-              </TabsTrigger>
-              <TabsTrigger value="memorabilia" className="flex items-center gap-2">
-                <Trophy className="h-4 w-4" />
-                Memorabilia ({memorabiliaItems.length})
-              </TabsTrigger>
-              <TabsTrigger value="collectible" className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Collectibles ({collectibleItems.length})
-              </TabsTrigger>
-            </TabsList>
+      <div className="bg-white border border-gray-100 rounded-xl">
+        <div className="border-b border-gray-100 p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Items by Category</h3>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setActiveTab('card')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'card' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              <CreditCard className="h-4 w-4" />
+              Cards ({cardItems.length})
+            </button>
+            <button 
+              onClick={() => setActiveTab('memorabilia')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'memorabilia' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              <Trophy className="h-4 w-4" />
+              Memorabilia ({memorabiliaItems.length})
+            </button>
+            <button 
+              onClick={() => setActiveTab('collectible')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'collectible' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              <Sparkles className="h-4 w-4" />
+              Collectibles ({collectibleItems.length})
+            </button>
+          </div>
+        </div>
 
-            <TabsContent value="card" className="mt-4">
-              <ItemsList items={cardItems} type="card" />
-            </TabsContent>
-
-            <TabsContent value="memorabilia" className="mt-4">
-              <ItemsList items={memorabiliaItems} type="memorabilia" />
-            </TabsContent>
-
-            <TabsContent value="collectible" className="mt-4">
-              <ItemsList items={collectibleItems} type="collectible" />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+        <div className="p-4">
+          <ItemsList items={currentItems} type={activeTab} />
+        </div>
+      </div>
 
       {/* By Item Type Stats */}
       {stats && stats.by_item_type && (
         <div className="grid grid-cols-3 gap-4">
           {(['card', 'memorabilia', 'collectible'] as AuthItemType[]).map((type) => (
-            <Card key={type}>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-full ${
-                    type === 'card' ? 'bg-blue-100' :
-                    type === 'memorabilia' ? 'bg-yellow-100' : 'bg-purple-100'
-                  }`}>
-                    {itemTypeIcons[type]}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 capitalize">{type}s</p>
-                    <p className="text-xl font-bold">
-                      {stats.by_item_type[type] || 0}
-                    </p>
-                    <p className="text-xs text-gray-400">authenticated</p>
-                  </div>
+            <div key={type} className="bg-white border border-gray-100 rounded-xl p-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-full ${
+                  type === 'card' ? 'bg-blue-100' :
+                  type === 'memorabilia' ? 'bg-yellow-100' : 'bg-purple-100'
+                }`}>
+                  {itemTypeIcons[type]}
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <p className="text-sm text-gray-500 capitalize">{type}s</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {stats.by_item_type[type] || 0}
+                  </p>
+                  <p className="text-xs text-gray-400">authenticated</p>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -307,14 +315,14 @@ function ItemsList({
               <div>
                 {type === 'card' ? (
                   <>
-                    <p className="font-medium">{item.player_name || 'Unknown Player'}</p>
+                    <p className="font-medium text-gray-900">{item.player_name || 'Unknown Player'}</p>
                     <p className="text-sm text-gray-500">
                       {item.card_number} • {item.product_line_name}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="font-medium">{item.item_name || item.description || 'Unknown Item'}</p>
+                    <p className="font-medium text-gray-900">{item.item_name || item.description || 'Unknown Item'}</p>
                     <p className="text-sm text-gray-500">
                       {item.item_category || type}
                     </p>
@@ -327,9 +335,9 @@ function ItemsList({
             </div>
 
             <div className="text-right">
-              <Badge className={statusColors[item.status]}>
+              <span className={`px-2 py-1 rounded text-xs ${statusColors[item.status]}`}>
                 {item.status.replace('_', ' ')}
-              </Badge>
+              </span>
               {item.cert_number && (
                 <p className="text-xs text-gray-500 mt-1">Cert: {item.cert_number}</p>
               )}

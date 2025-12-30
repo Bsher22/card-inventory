@@ -4,8 +4,8 @@
  * Manages PSA/BGS/SGC card grading submissions
  */
 
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Plus, 
   Package, 
@@ -19,13 +19,23 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-import { cardGradingApi } from '@/api/gradingApi';
-import type { CardGradingSubmission, CardGradingStats } from '@/types';
-import { formatCurrency, formatDate } from '@/utils/format';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cardGradingApi } from '../api/gradingApi';
+import type { CardGradingSubmission, CardGradingStats } from '../types';
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value);
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
 // Status badge colors
 const statusColors: Record<string, string> = {
@@ -51,7 +61,6 @@ const statusIcons: Record<string, React.ReactNode> = {
 export default function CardGradingPage() {
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const queryClient = useQueryClient();
 
   // Fetch submissions
   const { data: submissions = [], isLoading: loadingSubmissions } = useQuery({
@@ -78,168 +87,150 @@ export default function CardGradingPage() {
   });
 
   // Group submissions by status
-  const activeSubmissions = submissions.filter(s => 
+  const activeSubmissions = submissions.filter((s: CardGradingSubmission) => 
     ['pending', 'shipped', 'received', 'grading', 'shipped_back'].includes(s.status)
   );
-  const completedSubmissions = submissions.filter(s => s.status === 'returned');
+  const completedSubmissions = submissions.filter((s: CardGradingSubmission) => s.status === 'returned');
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Card Grading</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Card Grading</h1>
           <p className="text-gray-500">PSA, BGS, SGC submissions</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
           New Submission
-        </Button>
+        </button>
       </div>
 
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Out for Grading</p>
-                  <p className="text-2xl font-bold">{stats.cards_out_for_grading}</p>
-                </div>
-                <Package className="h-8 w-8 text-blue-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Out for Grading</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.cards_out_for_grading}</p>
               </div>
-            </CardContent>
-          </Card>
+              <Package className="h-8 w-8 text-blue-500" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pending Fees</p>
-                  <p className="text-2xl font-bold">{formatCurrency(stats.pending_fees)}</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-green-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Pending Fees</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.pending_fees)}</p>
               </div>
-            </CardContent>
-          </Card>
+              <DollarSign className="h-8 w-8 text-green-500" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Graded</p>
-                  <p className="text-2xl font-bold">{stats.total_graded}</p>
-                </div>
-                <Award className="h-8 w-8 text-purple-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Graded</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total_graded}</p>
               </div>
-            </CardContent>
-          </Card>
+              <Award className="h-8 w-8 text-purple-500" />
+            </div>
+          </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Gem Rate (PSA 10)</p>
-                  <p className="text-2xl font-bold">{stats.gem_rate}%</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-yellow-500" />
+          <div className="bg-white border border-gray-100 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Gem Rate (PSA 10)</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.gem_rate}%</p>
               </div>
-            </CardContent>
-          </Card>
+              <TrendingUp className="h-8 w-8 text-yellow-500" />
+            </div>
+          </div>
         </div>
       )}
 
       {/* Pending by Company */}
       {pendingByCompany.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Pending by Company</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {pendingByCompany.map((company) => (
-                <div 
-                  key={company.company_id} 
-                  className="p-4 border rounded-lg flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-semibold">{company.company_code}</p>
-                    <p className="text-sm text-gray-500">
-                      {company.pending_count} submission{company.pending_count !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(company.pending_value)}</p>
-                    {company.oldest_submission_date && (
-                      <p className="text-xs text-gray-400">
-                        Since {formatDate(company.oldest_submission_date)}
-                      </p>
-                    )}
-                  </div>
+        <div className="bg-white border border-gray-100 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending by Company</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {pendingByCompany.map((company) => (
+              <div 
+                key={company.company_id} 
+                className="p-4 border rounded-lg flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-gray-900">{company.company_code}</p>
+                  <p className="text-sm text-gray-500">
+                    {company.pending_count} submission{company.pending_count !== 1 ? 's' : ''}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="text-right">
+                  <p className="font-medium text-gray-900">{formatCurrency(company.pending_value)}</p>
+                  {company.oldest_submission_date && (
+                    <p className="text-xs text-gray-400">
+                      Since {formatDate(company.oldest_submission_date)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Submissions Tabs */}
-      <Tabs defaultValue="active">
-        <TabsList>
-          <TabsTrigger value="active">
-            Active ({activeSubmissions.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            Completed ({completedSubmissions.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="active" className="mt-4">
+      <div className="bg-white border border-gray-100 rounded-xl">
+        <div className="border-b border-gray-100 p-4">
+          <div className="flex gap-4">
+            <button className="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">
+              Active ({activeSubmissions.length})
+            </button>
+            <button className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+              Completed ({completedSubmissions.length})
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-4">
           <SubmissionsList 
             submissions={activeSubmissions} 
             onSelect={setSelectedSubmission}
           />
-        </TabsContent>
-
-        <TabsContent value="completed" className="mt-4">
-          <SubmissionsList 
-            submissions={completedSubmissions} 
-            onSelect={setSelectedSubmission}
-          />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* Grade Distribution */}
       {stats && Object.keys(stats.grade_distribution).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Grade Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2 h-32">
-              {Object.entries(stats.grade_distribution)
-                .sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]))
-                .map(([grade, count]) => {
-                  const maxCount = Math.max(...Object.values(stats.grade_distribution));
-                  const height = (count / maxCount) * 100;
-                  return (
-                    <div key={grade} className="flex-1 flex flex-col items-center">
-                      <div 
-                        className="w-full bg-blue-500 rounded-t"
-                        style={{ height: `${height}%` }}
-                      />
-                      <span className="text-xs mt-1">{grade}</span>
-                      <span className="text-xs text-gray-500">{count}</span>
-                    </div>
-                  );
-                })}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-gray-100 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Grade Distribution
+          </h3>
+          <div className="flex items-end gap-2 h-32">
+            {Object.entries(stats.grade_distribution)
+              .sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]))
+              .map(([grade, count]) => {
+                const maxCount = Math.max(...Object.values(stats.grade_distribution));
+                const height = (count / maxCount) * 100;
+                return (
+                  <div key={grade} className="flex-1 flex flex-col items-center">
+                    <div 
+                      className="w-full bg-blue-500 rounded-t"
+                      style={{ height: `${height}%` }}
+                    />
+                    <span className="text-xs mt-1">{grade}</span>
+                    <span className="text-xs text-gray-500">{count}</span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -264,61 +255,59 @@ function SubmissionsList({
   return (
     <div className="space-y-3">
       {submissions.map((submission) => (
-        <Card 
+        <div 
           key={submission.id} 
-          className="cursor-pointer hover:bg-gray-50 transition-colors"
+          className="border border-gray-100 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={() => onSelect(submission.id)}
         >
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`p-2 rounded-full ${statusColors[submission.status]}`}>
-                  {statusIcons[submission.status]}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{submission.company_code}</span>
-                    {submission.submission_number && (
-                      <span className="text-gray-500">#{submission.submission_number}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    {submission.total_cards} card{submission.total_cards !== 1 ? 's' : ''} • 
-                    Submitted {formatDate(submission.date_submitted)}
-                  </p>
-                </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`p-2 rounded-full ${statusColors[submission.status]}`}>
+                {statusIcons[submission.status]}
               </div>
-
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <Badge className={statusColors[submission.status]}>
-                    {submission.status.replace('_', ' ')}
-                  </Badge>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {formatCurrency(submission.total_declared_value)}
-                  </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-900">{submission.company_code}</span>
+                  {submission.submission_number && (
+                    <span className="text-gray-500">#{submission.submission_number}</span>
+                  )}
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <p className="text-sm text-gray-500">
+                  {submission.total_cards} card{submission.total_cards !== 1 ? 's' : ''} • 
+                  Submitted {formatDate(submission.date_submitted)}
+                </p>
               </div>
             </div>
 
-            {/* Progress indicator for active submissions */}
-            {submission.status !== 'returned' && submission.status !== 'cancelled' && (
-              <div className="mt-3 flex items-center gap-1">
-                {['pending', 'shipped', 'received', 'grading', 'shipped_back', 'returned'].map((step, idx) => {
-                  const currentIdx = ['pending', 'shipped', 'received', 'grading', 'shipped_back', 'returned'].indexOf(submission.status);
-                  const isComplete = idx <= currentIdx;
-                  return (
-                    <div 
-                      key={step}
-                      className={`h-1 flex-1 rounded ${isComplete ? 'bg-blue-500' : 'bg-gray-200'}`}
-                    />
-                  );
-                })}
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <span className={`px-2 py-1 rounded text-xs ${statusColors[submission.status]}`}>
+                  {submission.status.replace('_', ' ')}
+                </span>
+                <p className="text-sm text-gray-500 mt-1">
+                  {formatCurrency(submission.total_declared_value)}
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <ChevronRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+
+          {/* Progress indicator for active submissions */}
+          {submission.status !== 'returned' && submission.status !== 'cancelled' && (
+            <div className="mt-3 flex items-center gap-1">
+              {['pending', 'shipped', 'received', 'grading', 'shipped_back', 'returned'].map((step, idx) => {
+                const currentIdx = ['pending', 'shipped', 'received', 'grading', 'shipped_back', 'returned'].indexOf(submission.status);
+                const isComplete = idx <= currentIdx;
+                return (
+                  <div 
+                    key={step}
+                    className={`h-1 flex-1 rounded ${isComplete ? 'bg-blue-500' : 'bg-gray-200'}`}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
