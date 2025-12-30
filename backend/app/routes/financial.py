@@ -208,6 +208,46 @@ async def list_purchases(
     return result.scalars().all()
 
 
+@router.get("/purchases/analytics", response_model=PurchaseAnalytics)
+async def get_purchase_analytics(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get purchase analytics summary."""
+    query = select(Purchase)
+    
+    if start_date:
+        query = query.where(Purchase.purchase_date >= start_date)
+    if end_date:
+        query = query.where(Purchase.purchase_date <= end_date)
+    
+    result = await db.execute(query)
+    purchases = result.scalars().all()
+    
+    total_spent = sum(p.total or Decimal("0") for p in purchases)
+    
+    # Vendor breakdown
+    vendor_totals: dict[str, Decimal] = {}
+    for p in purchases:
+        v = p.vendor or "Unknown"
+        vendor_totals[v] = vendor_totals.get(v, Decimal("0")) + (p.total or Decimal("0"))
+    
+    # Monthly breakdown
+    month_totals: dict[str, Decimal] = {}
+    for p in purchases:
+        m = p.purchase_date.strftime("%Y-%m")
+        month_totals[m] = month_totals.get(m, Decimal("0")) + (p.total or Decimal("0"))
+    
+    return PurchaseAnalytics(
+        total_purchases=len(purchases),
+        total_spent=total_spent,
+        avg_purchase_price=total_spent / len(purchases) if purchases else Decimal("0"),
+        purchases_by_vendor=vendor_totals,
+        purchases_by_month=month_totals,
+    )
+
+
 @router.get("/purchases/{purchase_id}", response_model=PurchaseResponse)
 async def get_purchase(
     purchase_id: UUID,
@@ -390,6 +430,51 @@ async def list_sales(
     return result.scalars().all()
 
 
+@router.get("/sales/analytics", response_model=SalesAnalytics)
+async def get_sales_analytics(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get sales analytics summary."""
+    query = select(Sale)
+    
+    if start_date:
+        query = query.where(Sale.sale_date >= start_date)
+    if end_date:
+        query = query.where(Sale.sale_date <= end_date)
+    
+    result = await db.execute(query.options(selectinload(Sale.items)))
+    sales = result.scalars().all()
+    
+    total_revenue = sum(s.net_amount or Decimal("0") for s in sales)
+    total_cost = sum(
+        sum(i.cost_basis or Decimal("0") for i in s.items)
+        for s in sales
+    )
+    
+    # Platform breakdown
+    platform_totals: dict[str, Decimal] = {}
+    for s in sales:
+        p = s.platform or "Unknown"
+        platform_totals[p] = platform_totals.get(p, Decimal("0")) + (s.net_amount or Decimal("0"))
+    
+    # Monthly breakdown
+    month_totals: dict[str, Decimal] = {}
+    for s in sales:
+        m = s.sale_date.strftime("%Y-%m")
+        month_totals[m] = month_totals.get(m, Decimal("0")) + (s.net_amount or Decimal("0"))
+    
+    return SalesAnalytics(
+        total_sales=len(sales),
+        total_revenue=total_revenue,
+        total_profit=total_revenue - total_cost,
+        avg_sale_price=total_revenue / len(sales) if sales else Decimal("0"),
+        sales_by_platform=platform_totals,
+        sales_by_month=month_totals,
+    )
+
+
 @router.get("/sales/{sale_id}", response_model=SaleResponse)
 async def get_sale(
     sale_id: UUID,
@@ -490,92 +575,3 @@ async def delete_sale(
     
     await db.delete(sale)
     await db.commit()
-
-
-# ============================================
-# ANALYTICS ROUTES
-# ============================================
-
-@router.get("/analytics/sales", response_model=SalesAnalytics)
-async def get_sales_analytics(
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get sales analytics summary."""
-    query = select(Sale)
-    
-    if start_date:
-        query = query.where(Sale.sale_date >= start_date)
-    if end_date:
-        query = query.where(Sale.sale_date <= end_date)
-    
-    result = await db.execute(query.options(selectinload(Sale.items)))
-    sales = result.scalars().all()
-    
-    total_revenue = sum(s.net_amount or Decimal("0") for s in sales)
-    total_cost = sum(
-        sum(i.cost_basis or Decimal("0") for i in s.items)
-        for s in sales
-    )
-    
-    # Platform breakdown
-    platform_totals: dict[str, Decimal] = {}
-    for s in sales:
-        p = s.platform or "Unknown"
-        platform_totals[p] = platform_totals.get(p, Decimal("0")) + (s.net_amount or Decimal("0"))
-    
-    # Monthly breakdown
-    month_totals: dict[str, Decimal] = {}
-    for s in sales:
-        m = s.sale_date.strftime("%Y-%m")
-        month_totals[m] = month_totals.get(m, Decimal("0")) + (s.net_amount or Decimal("0"))
-    
-    return SalesAnalytics(
-        total_sales=len(sales),
-        total_revenue=total_revenue,
-        total_profit=total_revenue - total_cost,
-        avg_sale_price=total_revenue / len(sales) if sales else Decimal("0"),
-        sales_by_platform=platform_totals,
-        sales_by_month=month_totals,
-    )
-
-
-@router.get("/analytics/purchases", response_model=PurchaseAnalytics)
-async def get_purchase_analytics(
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get purchase analytics summary."""
-    query = select(Purchase)
-    
-    if start_date:
-        query = query.where(Purchase.purchase_date >= start_date)
-    if end_date:
-        query = query.where(Purchase.purchase_date <= end_date)
-    
-    result = await db.execute(query)
-    purchases = result.scalars().all()
-    
-    total_spent = sum(p.total or Decimal("0") for p in purchases)
-    
-    # Vendor breakdown
-    vendor_totals: dict[str, Decimal] = {}
-    for p in purchases:
-        v = p.vendor or "Unknown"
-        vendor_totals[v] = vendor_totals.get(v, Decimal("0")) + (p.total or Decimal("0"))
-    
-    # Monthly breakdown
-    month_totals: dict[str, Decimal] = {}
-    for p in purchases:
-        m = p.purchase_date.strftime("%Y-%m")
-        month_totals[m] = month_totals.get(m, Decimal("0")) + (p.total or Decimal("0"))
-    
-    return PurchaseAnalytics(
-        total_purchases=len(purchases),
-        total_spent=total_spent,
-        avg_purchase_price=total_spent / len(purchases) if purchases else Decimal("0"),
-        purchases_by_vendor=vendor_totals,
-        purchases_by_month=month_totals,
-    )

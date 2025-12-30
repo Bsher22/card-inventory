@@ -17,7 +17,7 @@ from app.services.ebay_listing_service import EbayListingService
 router = APIRouter()
 
 
-@router.post("/ebay-listings/generate", response_model=EbayListingResponse)
+@router.post("/ebay/generate-listings", response_model=EbayListingResponse)
 async def generate_ebay_listings(
     request: EbayListingRequest,
     db: AsyncSession = Depends(get_db),
@@ -56,7 +56,7 @@ async def generate_ebay_listings(
         )
 
 
-@router.get("/ebay-listings/preview/{inventory_id}", response_model=EbayListingResponse)
+@router.get("/ebay/preview/{inventory_id}", response_model=EbayListingResponse)
 async def preview_single_listing(
     inventory_id: UUID,
     db: AsyncSession = Depends(get_db),

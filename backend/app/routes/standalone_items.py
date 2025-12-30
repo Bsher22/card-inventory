@@ -189,6 +189,55 @@ async def list_standalone_items_summary(
     return result.scalars().all()
 
 
+@router.get("/standalone-items/stats")
+async def get_standalone_items_stats(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get statistics for standalone items."""
+    # Total items by category
+    cat_stats = await db.execute(
+        select(
+            ItemCategory.name,
+            func.count(StandaloneItem.id).label('count')
+        )
+        .outerjoin(StandaloneItem, StandaloneItem.category_id == ItemCategory.id)
+        .group_by(ItemCategory.id, ItemCategory.name)
+        .order_by(ItemCategory.sort_order)
+    )
+    by_category = {row.name: row.count for row in cat_stats.all()}
+    
+    # Total items by sport
+    sport_stats = await db.execute(
+        select(
+            StandaloneItem.sport,
+            func.count(StandaloneItem.id).label('count')
+        )
+        .group_by(StandaloneItem.sport)
+    )
+    by_sport = {row.sport: row.count for row in sport_stats.all()}
+    
+    # Total authenticated items
+    auth_result = await db.execute(
+        select(func.count()).select_from(StandaloneItem).where(
+            StandaloneItem.is_authenticated == True
+        )
+    )
+    authenticated_count = auth_result.scalar()
+    
+    # Total items
+    total_result = await db.execute(
+        select(func.count()).select_from(StandaloneItem)
+    )
+    total_count = total_result.scalar()
+    
+    return {
+        "total": total_count,
+        "authenticated": authenticated_count,
+        "by_category": by_category,
+        "by_sport": by_sport,
+    }
+
+
 @router.get("/standalone-items/{item_id}", response_model=StandaloneItemResponse)
 async def get_standalone_item(
     item_id: UUID,
@@ -340,56 +389,3 @@ async def get_collectible_types():
 async def get_conditions():
     """Get available conditions."""
     return CONDITIONS
-
-
-# ============================================
-# STATISTICS
-# ============================================
-
-@router.get("/standalone-items/stats")
-async def get_standalone_items_stats(
-    db: AsyncSession = Depends(get_db),
-):
-    """Get statistics for standalone items."""
-    # Total items by category
-    cat_stats = await db.execute(
-        select(
-            ItemCategory.name,
-            func.count(StandaloneItem.id).label('count')
-        )
-        .outerjoin(StandaloneItem, StandaloneItem.category_id == ItemCategory.id)
-        .group_by(ItemCategory.id, ItemCategory.name)
-        .order_by(ItemCategory.sort_order)
-    )
-    by_category = {row.name: row.count for row in cat_stats.all()}
-    
-    # Total items by sport
-    sport_stats = await db.execute(
-        select(
-            StandaloneItem.sport,
-            func.count(StandaloneItem.id).label('count')
-        )
-        .group_by(StandaloneItem.sport)
-    )
-    by_sport = {row.sport: row.count for row in sport_stats.all()}
-    
-    # Total authenticated items
-    auth_result = await db.execute(
-        select(func.count()).select_from(StandaloneItem).where(
-            StandaloneItem.is_authenticated == True
-        )
-    )
-    authenticated_count = auth_result.scalar()
-    
-    # Total items
-    total_result = await db.execute(
-        select(func.count()).select_from(StandaloneItem)
-    )
-    total_count = total_result.scalar()
-    
-    return {
-        "total": total_count,
-        "authenticated": authenticated_count,
-        "by_category": by_category,
-        "by_sport": by_sport,
-    }
