@@ -5,7 +5,12 @@ import {
   ChevronDown, ChevronRight, Award
 } from 'lucide-react';
 import { api } from '../api';
-import type { GradingSubmission } from '../types';
+import type { 
+  CardGradingSubmissionResponse, 
+  CardGradingItemResponse,
+  GradingCompanyWithLevels,
+  PendingByCompany 
+} from '../types';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -37,23 +42,23 @@ export default function GradingSubmissions() {
 
   const { data: companies } = useQuery({
     queryKey: ['grading-companies'],
-    queryFn: () => api.grading.getGradingCompanies(),
+    queryFn: () => api.getGradingCompanies(),
   });
 
   const { data: stats } = useQuery({
     queryKey: ['grading-stats'],
-    queryFn: () => api.grading.getGradingStats(),
+    queryFn: () => api.getGradingStats(),
   });
 
   const { data: pendingByCompany } = useQuery({
     queryKey: ['pending-by-company'],
-    queryFn: () => api.grading.getPendingByCompany(),
+    queryFn: () => api.getPendingByCompany(),
   });
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['grading-submissions', filterCompany, filterStatus],
-    queryFn: () => api.grading.getGradingSubmissions({
-      grading_company_id: filterCompany || undefined,  // FIXED: was company_id
+    queryFn: () => api.getGradingSubmissions({
+      grading_company_id: filterCompany || undefined,
       status: filterStatus || undefined,
     }),
   });
@@ -73,7 +78,7 @@ export default function GradingSubmissions() {
         </button>
       </div>
 
-      {/* Summary Stats - FIXED: use correct field names */}
+      {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Cards Out</p>
@@ -82,7 +87,7 @@ export default function GradingSubmissions() {
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Pending Fees</p>
-          <p className="text-2xl font-bold text-amber-600">{formatCurrency(stats?.pending_fees || 0)}</p>
+          <p className="text-2xl font-bold text-amber-600">{formatCurrency(Number(stats?.pending_fees) || 0)}</p>
         </div>
         <div className="bg-white border border-gray-100 rounded-xl p-4">
           <p className="text-sm text-gray-500">Cards Graded</p>
@@ -99,10 +104,10 @@ export default function GradingSubmissions() {
         <div className="bg-white border border-gray-100 rounded-xl p-4 mb-6">
           <h3 className="font-medium text-gray-900 mb-3">Pending by Company</h3>
           <div className="flex flex-wrap gap-3">
-            {pendingByCompany.map((pending) => (
+            {pendingByCompany.map((pending: PendingByCompany) => (
               <div key={pending.company_id} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
                 <span className="font-medium text-gray-900">{pending.company_name}</span>
-                <span className="text-sm text-gray-500">{pending.pending_cards} cards</span>
+                <span className="text-sm text-gray-500">{pending.pending_count} cards</span>
               </div>
             ))}
           </div>
@@ -118,7 +123,7 @@ export default function GradingSubmissions() {
             className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Companies</option>
-            {companies?.map((c) => (
+            {companies?.map((c: GradingCompanyWithLevels) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
@@ -145,7 +150,7 @@ export default function GradingSubmissions() {
       {/* Submissions List */}
       {isLoading ? (
         <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(5)].map((_, i: number) => (
             <div key={i} className="bg-white rounded-xl border border-gray-100 p-6 animate-pulse">
               <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>
               <div className="h-4 bg-gray-200 rounded w-32"></div>
@@ -154,7 +159,7 @@ export default function GradingSubmissions() {
         </div>
       ) : (
         <div className="space-y-4">
-          {submissions?.map((submission) => (
+          {submissions?.map((submission: CardGradingSubmissionResponse) => (
             <SubmissionCard
               key={submission.id}
               submission={submission}
@@ -179,15 +184,14 @@ function SubmissionCard({
   isExpanded,
   onToggle,
 }: {
-  submission: GradingSubmission;
+  submission: CardGradingSubmissionResponse;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
   const statusStyle = STATUS_STYLES[submission.status] || STATUS_STYLES.pending;
   const totalCards = submission.total_cards || submission.items?.length || 0;
-  const gradedCards = submission.cards_graded || submission.items?.filter(i => i.grade_value !== null).length || 0;
-  // FIXED: use grading_fee instead of total_fee, and shipping_to_cost instead of shipping_cost
-  const totalCost = (submission.grading_fee || 0) + (submission.shipping_to_cost || 0);
+  const gradedCards = submission.cards_graded || submission.items?.filter((i: CardGradingItemResponse) => i.grade_value !== null).length || 0;
+  const totalCost = Number(submission.grading_fee || 0) + Number(submission.shipping_to_cost || 0);
 
   return (
     <div className={`bg-white rounded-xl border transition-all ${
@@ -205,7 +209,7 @@ function SubmissionCard({
             <div>
               <div className="flex items-center gap-3">
                 <h3 className="font-semibold text-gray-900">
-                  {submission.company?.code || submission.company?.name || 'Unknown'}
+                  {submission.company_code || submission.company_name || 'Unknown'}
                 </h3>
                 {submission.submission_number && (
                   <span className="text-sm text-gray-500">#{submission.submission_number}</span>
@@ -254,11 +258,11 @@ function SubmissionCard({
             )}
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Grading Fee</p>
-              <p className="font-medium text-gray-900">{formatCurrency(submission.grading_fee || 0)}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(Number(submission.grading_fee) || 0)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-500">Shipping</p>
-              <p className="font-medium text-gray-900">{formatCurrency(submission.shipping_to_cost || 0)}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(Number(submission.shipping_to_cost) || 0)}</p>
             </div>
           </div>
 
@@ -268,7 +272,7 @@ function SubmissionCard({
             </p>
           )}
 
-          {/* Items Table - FIXED: use grade_value instead of grade_received */}
+          {/* Items Table */}
           <h4 className="font-medium text-gray-900 mb-3">Items ({submission.items?.length || 0})</h4>
           <div className="bg-gray-50 rounded-lg overflow-hidden">
             <table className="w-full text-sm">
@@ -281,19 +285,19 @@ function SubmissionCard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {submission.items?.map((item) => (
+                {submission.items?.map((item: CardGradingItemResponse) => (
                   <tr key={item.id}>
                     <td className="px-3 py-2 text-gray-900">
-                      {item.checklist?.player?.name || item.checklist?.player_name_raw || 'Unknown'}
+                      {item.player_name || 'Unknown'}
                     </td>
                     <td className="px-3 py-2 text-center text-gray-600">
-                      {formatCurrency(item.declared_value || 0)}
+                      {formatCurrency(Number(item.declared_value) || 0)}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {item.grade_value !== null ? (
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                          item.grade_value >= 9 ? 'bg-green-100 text-green-700' :
-                          item.grade_value >= 7 ? 'bg-blue-100 text-blue-700' :
+                          Number(item.grade_value) >= 9 ? 'bg-green-100 text-green-700' :
+                          Number(item.grade_value) >= 7 ? 'bg-blue-100 text-blue-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
                           <Award size={12} />

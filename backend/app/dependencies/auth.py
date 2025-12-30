@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import User
-from app.services.auth_service import decode_access_token, get_user_by_id
+from app.services.user_auth_service import decode_access_token, get_user_by_id
 
 
 # OAuth2 scheme - extracts token from Authorization: Bearer <token> header

@@ -28,10 +28,10 @@ import type {
   PendingConsignmentsValue,
   GradingCompanyWithLevels,
   GradingServiceLevel,
-  GradingSubmission,
-  SubmissionCreate,
-  SubmissionGradeResults,
-  GradingStats,
+  CardGradingSubmissionResponse,
+  CardGradingSubmissionCreate,
+  CardGradingResultsSubmit,
+  CardGradingStats,
   PendingByCompany,
 } from '../types';
 
@@ -237,16 +237,16 @@ class ApiClient {
     return this.request<InventoryAnalytics>('/inventory/analytics');
   }
 
-  async getPlayerInventorySummary(params?: {
+  async getInventoryByPlayer(params?: {
+    skip?: number;
     limit?: number;
-    min_cards?: number;
   }): Promise<PlayerInventorySummary[]> {
     const searchParams = new URLSearchParams();
+    if (params?.skip) searchParams.set('skip', params.skip.toString());
     if (params?.limit) searchParams.set('limit', params.limit.toString());
-    if (params?.min_cards) searchParams.set('min_cards', params.min_cards.toString());
     
     const query = searchParams.toString();
-    return this.request<PlayerInventorySummary[]>(`/inventory/players${query ? `?${query}` : ''}`);
+    return this.request<PlayerInventorySummary[]>(`/inventory/by-player${query ? `?${query}` : ''}`);
   }
 
   async createInventory(data: InventoryCreate): Promise<InventoryWithCard> {
@@ -256,28 +256,17 @@ class ApiClient {
     });
   }
 
+  async bulkCreateInventory(items: InventoryCreate[]): Promise<BulkInventoryResult> {
+    return this.request<BulkInventoryResult>('/inventory/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  }
+
   async updateInventory(id: string, data: Partial<InventoryCreate>): Promise<InventoryWithCard> {
     return this.request<InventoryWithCard>(`/inventory/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-    });
-  }
-
-  async adjustInventory(id: string, adjustment: number): Promise<InventoryWithCard> {
-    return this.request<InventoryWithCard>(`/inventory/${id}/adjust`, {
-      method: 'POST',
-      body: JSON.stringify({ adjustment }),
-    });
-  }
-
-  async bulkAddInventory(items: {
-    checklist_id: string;
-    quantity: number;
-    condition?: string;
-  }[]): Promise<BulkInventoryResult> {
-    return this.request<BulkInventoryResult>('/inventory/bulk', {
-      method: 'POST',
-      body: JSON.stringify({ items }),
     });
   }
 
@@ -475,7 +464,7 @@ class ApiClient {
     status?: string;
     skip?: number;
     limit?: number;
-  }): Promise<GradingSubmission[]> {
+  }): Promise<CardGradingSubmissionResponse[]> {
     const searchParams = new URLSearchParams();
     if (params?.grading_company_id) searchParams.set('grading_company_id', params.grading_company_id);
     if (params?.status) searchParams.set('status', params.status);
@@ -483,23 +472,23 @@ class ApiClient {
     if (params?.limit) searchParams.set('limit', params.limit.toString());
     
     const query = searchParams.toString();
-    return this.request<GradingSubmission[]>(`/grading/submissions${query ? `?${query}` : ''}`);
+    return this.request<CardGradingSubmissionResponse[]>(`/grading/submissions${query ? `?${query}` : ''}`);
   }
 
-  async getGradingSubmission(id: string): Promise<GradingSubmission> {
-    return this.request<GradingSubmission>(`/grading/submissions/${id}`);
+  async getGradingSubmission(id: string): Promise<CardGradingSubmissionResponse> {
+    return this.request<CardGradingSubmissionResponse>(`/grading/submissions/${id}`);
   }
 
-  async getGradingStats(): Promise<GradingStats> {
-    return this.request<GradingStats>('/grading/submissions/stats');
+  async getGradingStats(): Promise<CardGradingStats> {
+    return this.request<CardGradingStats>('/grading/submissions/stats');
   }
 
   async getPendingByCompany(): Promise<PendingByCompany[]> {
     return this.request<PendingByCompany[]>('/grading/submissions/pending-by-company');
   }
 
-  async createGradingSubmission(data: SubmissionCreate): Promise<GradingSubmission> {
-    return this.request<GradingSubmission>('/grading/submissions', {
+  async createGradingSubmission(data: CardGradingSubmissionCreate): Promise<CardGradingSubmissionResponse> {
+    return this.request<CardGradingSubmissionResponse>('/grading/submissions', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -514,15 +503,15 @@ class ApiClient {
       date_shipped_back?: string;
       shipping_return_tracking?: string;
     }
-  ): Promise<GradingSubmission> {
-    return this.request<GradingSubmission>(`/grading/submissions/${id}/status`, {
+  ): Promise<CardGradingSubmissionResponse> {
+    return this.request<CardGradingSubmissionResponse>(`/grading/submissions/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
 
-  async processGradedItems(id: string, data: SubmissionGradeResults): Promise<GradingSubmission> {
-    return this.request<GradingSubmission>(`/grading/submissions/${id}/grades`, {
+  async processGradedItems(id: string, data: CardGradingResultsSubmit): Promise<CardGradingSubmissionResponse> {
+    return this.request<CardGradingSubmissionResponse>(`/grading/submissions/${id}/grades`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
