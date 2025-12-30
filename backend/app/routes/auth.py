@@ -24,7 +24,7 @@ from app.schemas import (
     UserResponse,
     SetupRequest,
 )
-from app.services.auth_service import (
+from app.services.user_auth_service import (
     authenticate_user,
     create_access_token,
     create_user,
