@@ -18,11 +18,14 @@ from app.routes import (
     inventory_router,
     financial_router,
     consignments_router,
-    grading_router,
     beckett_router,
     card_types_router,
     standalone_items_router,
 )
+# Grading & Authentication routes
+from app.routes.card_grading import router as card_grading_router
+from app.routes.signature_auth import router as signature_auth_router
+
 # eBay routes - two separate routers for different functionality
 from app.routes.ebay_routes import router as ebay_import_router  # Sales import
 from app.routes.ebay import router as ebay_listing_router  # Listing generation
@@ -59,7 +62,7 @@ app.add_middleware(
 
 # Include routers
 # Auth router FIRST (for /api/auth/* endpoints)
-app.include_router(auth_router, prefix="/api", tags=["Authentication"])
+app.include_router(auth_router, prefix="/api", tags=["User Authentication"])
 
 # Business routers
 app.include_router(products_router, prefix="/api", tags=["Brands & Product Lines"])
@@ -68,7 +71,10 @@ app.include_router(inventory_router, prefix="/api", tags=["Inventory"])
 app.include_router(standalone_items_router, prefix="/api", tags=["Standalone Items"])
 app.include_router(financial_router, prefix="/api", tags=["Purchases & Sales"])
 app.include_router(consignments_router, prefix="/api", tags=["Consignments"])
-app.include_router(grading_router, prefix="/api", tags=["Grading Submissions"])
+
+# Grading & Authentication routers
+app.include_router(card_grading_router, prefix="/api", tags=["Card Grading (PSA/BGS/SGC)"])
+app.include_router(signature_auth_router, prefix="/api", tags=["Signature Authentication (PSA-DNA/JSA)"])
 
 # eBay routers
 app.include_router(ebay_import_router, prefix="/api", tags=["eBay Sales Import"])

@@ -5,11 +5,16 @@ Services Package - Barrel Exports
 Business logic and service layer exports.
 """
 
+# Core Services
 from app.services.checklist_parser import ChecklistParser
 from app.services.inventory_service import InventoryService
 
-# Auth service functions
-from app.services.auth_service import (
+# Grading & Authentication Services
+from app.services.card_grading_service import CardGradingService
+from app.services.signature_auth_service import SignatureAuthService
+
+# User Auth service functions (JWT, passwords)
+from app.services.user_auth_service import (
     verify_password,
     hash_password,
     create_access_token,
@@ -23,10 +28,13 @@ from app.services.auth_service import (
 )
 
 __all__ = [
-    # Existing services
+    # Core Services
     "ChecklistParser",
     "InventoryService",
-    # Auth service functions
+    # Grading & Authentication Services
+    "CardGradingService",
+    "SignatureAuthService",
+    # User Auth functions
     "verify_password",
     "hash_password",
     "create_access_token",

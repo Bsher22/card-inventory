@@ -28,12 +28,16 @@ from .standalone_items import ItemCategory, StandaloneItem, Sport
 # Consignments
 from .consignments import Consigner, Consignment, ConsignmentItem
 
-# Grading
+# Grading & Authentication
 from .grading import (
     GradingCompany,
     GradingServiceLevel,
-    GradingSubmission,
-    GradingSubmissionItem,
+    # Card Grading (PSA/BGS/SGC numeric grades)
+    CardGradingSubmission,
+    CardGradingItem,
+    # Signature Authentication (PSA/DNA, JSA)
+    AuthSubmission,
+    AuthSubmissionItem,
 )
 
 # Financial
@@ -75,11 +79,13 @@ __all__ = [
     "Consigner",
     "Consignment",
     "ConsignmentItem",
-    # Grading
+    # Grading & Authentication
     "GradingCompany",
     "GradingServiceLevel",
-    "GradingSubmission",
-    "GradingSubmissionItem",
+    "CardGradingSubmission",
+    "CardGradingItem",
+    "AuthSubmission",
+    "AuthSubmissionItem",
     # Financial
     "Purchase",
     "PurchaseItem",

@@ -100,26 +100,32 @@ from .consignments import (
     PendingConsignmentsValue,
 )
 
-# Grading
+# Grading & Authentication
 from .grading import (
-    GradingCompanyBase,
-    GradingCompanyCreate,
+    # Shared
+    ServiceLevelResponse,
     GradingCompanyResponse,
     GradingCompanyWithLevels,
-    GradingServiceLevelBase,
-    GradingServiceLevelCreate,
-    GradingServiceLevelResponse,
-    GradingSubmissionItemBase,
-    GradingSubmissionItemCreate,
-    GradingSubmissionItemResponse,
-    GradingSubmissionItemUpdate,
-    GradingSubmissionBase,
-    GradingSubmissionCreate,
-    SubmissionCreate,
-    GradingSubmissionResponse,
-    SubmissionGradeResults,
-    GradingStats,
+    # Card Grading (PSA/BGS/SGC)
+    CardGradingItemCreate,
+    CardGradingItemResponse,
+    CardGradingSubmissionCreate,
+    CardGradingSubmissionResponse,
+    CardGradingStatusUpdate,
+    CardGradeResult,
+    CardGradingResultsSubmit,
+    CardGradingStats,
     PendingByCompany,
+    # Signature Authentication (PSA/DNA, JSA)
+    AuthItemCreate,
+    AuthItemResponse,
+    AuthSubmissionCreate,
+    AuthSubmissionResponse,
+    AuthStatusUpdate,
+    AuthResult,
+    AuthResultsSubmit,
+    AuthStats,
+    AuthPendingByCompany,
 )
 
 # Financial
@@ -191,7 +197,7 @@ from .ebay import (
     EbaySalesAnalytics,
 )
 
-# Authentication
+# Authentication (User Auth - JWT/Passwords)
 from .auth import (
     Token,
     TokenData,
@@ -282,25 +288,30 @@ __all__ = [
     "ConsignmentResponse",
     "ConsignmentReturn",
     "PendingConsignmentsValue",
-    # Grading
-    "GradingCompanyBase",
-    "GradingCompanyCreate",
+    # Grading & Authentication - Shared
+    "ServiceLevelResponse",
     "GradingCompanyResponse",
     "GradingCompanyWithLevels",
-    "GradingServiceLevelBase",
-    "GradingServiceLevelCreate",
-    "GradingServiceLevelResponse",
-    "GradingSubmissionItemBase",
-    "GradingSubmissionItemCreate",
-    "GradingSubmissionItemResponse",
-    "GradingSubmissionItemUpdate",
-    "GradingSubmissionBase",
-    "GradingSubmissionCreate",
-    "SubmissionCreate",
-    "GradingSubmissionResponse",
-    "SubmissionGradeResults",
-    "GradingStats",
+    # Grading - Card Grading (PSA/BGS/SGC)
+    "CardGradingItemCreate",
+    "CardGradingItemResponse",
+    "CardGradingSubmissionCreate",
+    "CardGradingSubmissionResponse",
+    "CardGradingStatusUpdate",
+    "CardGradeResult",
+    "CardGradingResultsSubmit",
+    "CardGradingStats",
     "PendingByCompany",
+    # Grading - Signature Auth (PSA/DNA, JSA)
+    "AuthItemCreate",
+    "AuthItemResponse",
+    "AuthSubmissionCreate",
+    "AuthSubmissionResponse",
+    "AuthStatusUpdate",
+    "AuthResult",
+    "AuthResultsSubmit",
+    "AuthStats",
+    "AuthPendingByCompany",
     # Financial
     "PurchaseItemBase",
     "PurchaseItemCreate",
@@ -357,7 +368,7 @@ __all__ = [
     "EbayImportBatchRead",
     "EbayImportBatchDetail",
     "EbaySalesAnalytics",
-    # Authentication
+    # User Authentication
     "Token",
     "TokenData",
     "LoginRequest",
