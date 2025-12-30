@@ -89,7 +89,7 @@ async def list_checklists(
         responses = []
         for c in checklists:
             resp = ChecklistWithDetails.model_validate(c)
-            resp.inventory_quantity = inv_map.get(c.id, 0)
+            resp.inventory_count = inv_map.get(c.id, 0)
             responses.append(resp)
         return responses
     
@@ -118,7 +118,7 @@ async def get_checklist(
         raise HTTPException(status_code=404, detail="Checklist entry not found")
     
     resp = ChecklistWithDetails.model_validate(checklist)
-    resp.inventory_quantity = sum(i.quantity for i in checklist.inventory_items)
+    resp.inventory_count = sum(i.quantity for i in checklist.inventory_items)
     return resp
 
 
