@@ -172,6 +172,16 @@ class CardGradingStats(BaseModel):
     by_company: Dict[str, int]  # {"PSA": 100, "BGS": 50}
 
 
+class PendingByCompany(BaseModel):
+    """Pending grading items grouped by company."""
+    company_id: UUID
+    company_name: str
+    company_code: str
+    pending_count: int
+    pending_value: Decimal
+    oldest_submission_date: Optional[date] = None
+
+
 # ============================================
 # AUTHENTICATION SCHEMAS
 # ============================================
