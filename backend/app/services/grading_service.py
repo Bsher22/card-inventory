@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
-    GradingCompany, GradingServiceLevel, GradingSubmission, 
-    GradingSubmissionItem, Inventory, Checklist
+    GradingCompany, GradingServiceLevel, CardGradingSubmission, 
+    CardGradingItem, Inventory, Checklist
 )
 
 
@@ -50,12 +50,12 @@ class GradingService:
     
     async def get_service_levels(
         self,
-        grading_company_id: UUID,
+        company_id: UUID,
         active_only: bool = True,
     ) -> list[GradingServiceLevel]:
         """Get service levels for a grading company."""
         query = select(GradingServiceLevel).where(
-            GradingServiceLevel.grading_company_id == grading_company_id
+            GradingServiceLevel.company_id == company_id
         )
         
         if active_only:
@@ -71,49 +71,49 @@ class GradingService:
     
     async def get_submissions(
         self,
-        grading_company_id: Optional[UUID] = None,
+        company_id: Optional[UUID] = None,
         status: Optional[str] = None,
         skip: int = 0,
         limit: int = 50,
-    ) -> list[GradingSubmission]:
+    ) -> list[CardGradingSubmission]:
         """Get submissions with optional filters."""
         query = (
-            select(GradingSubmission)
+            select(CardGradingSubmission)
             .options(
-                selectinload(GradingSubmission.grading_company),
-                selectinload(GradingSubmission.service_level),
-                selectinload(GradingSubmission.items),
+                selectinload(CardGradingSubmission.company),
+                selectinload(CardGradingSubmission.service_level),
+                selectinload(CardGradingSubmission.items),
             )
         )
         
-        if grading_company_id:
-            query = query.where(GradingSubmission.grading_company_id == grading_company_id)
+        if company_id:
+            query = query.where(CardGradingSubmission.company_id == company_id)
         
         if status:
-            query = query.where(GradingSubmission.status == status)
+            query = query.where(CardGradingSubmission.status == status)
         
-        query = query.order_by(GradingSubmission.date_submitted.desc()).offset(skip).limit(limit)
+        query = query.order_by(CardGradingSubmission.date_submitted.desc()).offset(skip).limit(limit)
         result = await self.db.execute(query)
         return result.scalars().all()
     
-    async def get_submission(self, submission_id: UUID) -> Optional[GradingSubmission]:
+    async def get_submission(self, submission_id: UUID) -> Optional[CardGradingSubmission]:
         """Get a single submission with items."""
         result = await self.db.execute(
-            select(GradingSubmission)
+            select(CardGradingSubmission)
             .options(
-                selectinload(GradingSubmission.grading_company),
-                selectinload(GradingSubmission.service_level),
-                selectinload(GradingSubmission.items)
-                .selectinload(GradingSubmissionItem.checklist)
+                selectinload(CardGradingSubmission.company),
+                selectinload(CardGradingSubmission.service_level),
+                selectinload(CardGradingSubmission.items)
+                .selectinload(CardGradingItem.checklist)
                 .selectinload(Checklist.player),
             )
-            .where(GradingSubmission.id == submission_id)
+            .where(CardGradingSubmission.id == submission_id)
         )
         return result.scalar_one_or_none()
     
     async def create_submission(
         self,
-        grading_company_id: UUID,
+        company_id: UUID,
         date_submitted: date,
         items: list[dict],  # [{checklist_id, declared_value, fee_per_card?, source_inventory_id?, was_signed?}]
         service_level_id: Optional[UUID] = None,
@@ -123,16 +123,16 @@ class GradingService:
         shipping_to_tracking: Optional[str] = None,
         insurance_cost: Decimal = Decimal("0"),
         notes: Optional[str] = None,
-    ) -> GradingSubmission:
+    ) -> CardGradingSubmission:
         """
         Create a new grading submission and remove cards from inventory.
         
         Takes raw cards → out for grading status.
         """
         # Verify grading company exists
-        grading_company = await self.db.get(GradingCompany, grading_company_id)
+        grading_company = await self.db.get(GradingCompany, company_id)
         if not grading_company:
-            raise ValueError(f"Grading company not found: {grading_company_id}")
+            raise ValueError(f"Grading company not found: {company_id}")
         
         # Get service level for fee calculation
         service_level = None
@@ -153,13 +153,13 @@ class GradingService:
             grading_fee += Decimal(str(fee or 0))
         
         # Create submission
-        submission = GradingSubmission(
-            grading_company_id=grading_company_id,
+        submission = CardGradingSubmission(
+            company_id=company_id,
             service_level_id=service_level_id,
             submission_number=submission_number,
             reference_number=reference_number,
             date_submitted=date_submitted,
-            status="preparing",
+            status="pending",
             total_declared_value=total_declared,
             grading_fee=grading_fee,
             shipping_to_cost=shipping_to_cost,
@@ -173,10 +173,10 @@ class GradingService:
         
         # Create submission items and adjust inventory
         for idx, item_data in enumerate(items, start=1):
-            checklist_id = item_data["checklist_id"]
+            checklist_id = item_data.get("checklist_id") or item_data.get("inventory_id")
             declared_value = Decimal(str(item_data.get("declared_value", 0)))
             was_signed = item_data.get("was_signed", False)
-            source_inventory_id = item_data.get("source_inventory_id")
+            source_inventory_id = item_data.get("source_inventory_id") or item_data.get("inventory_id")
             
             fee = item_data.get("fee_per_card")
             if fee is None and service_level:
@@ -184,9 +184,13 @@ class GradingService:
             fee = Decimal(str(fee or 0))
             
             # Find source inventory (raw, potentially signed)
+            source_inv = None
             if source_inventory_id:
                 source_inv = await self.db.get(Inventory, source_inventory_id)
-            else:
+                if source_inv:
+                    checklist_id = source_inv.checklist_id
+            
+            if not source_inv:
                 # Find raw inventory matching signed status
                 result = await self.db.execute(
                     select(Inventory).where(
@@ -209,17 +213,17 @@ class GradingService:
             source_inv.quantity -= 1
             
             # Create submission item
-            item = GradingSubmissionItem(
+            submission_item = CardGradingItem(
                 submission_id=submission.id,
+                inventory_id=source_inv.id,
                 checklist_id=checklist_id,
-                source_inventory_id=source_inv.id,
                 line_number=idx,
                 declared_value=declared_value,
                 fee_per_card=fee,
-                was_signed=was_signed or source_inv.is_signed,
+                was_signed=was_signed,
                 status="pending",
             )
-            self.db.add(item)
+            self.db.add(submission_item)
         
         await self.db.flush()
         await self.db.refresh(submission)
@@ -229,24 +233,33 @@ class GradingService:
         self,
         submission_id: UUID,
         status: str,
+        date_shipped: Optional[date] = None,
         date_received: Optional[date] = None,
         date_graded: Optional[date] = None,
         date_shipped_back: Optional[date] = None,
+        date_returned: Optional[date] = None,
+        shipping_to_tracking: Optional[str] = None,
         shipping_return_tracking: Optional[str] = None,
-    ) -> GradingSubmission:
-        """Update submission tracking status."""
-        submission = await self.db.get(GradingSubmission, submission_id)
+    ) -> CardGradingSubmission:
+        """Update submission status and dates."""
+        submission = await self.get_submission(submission_id)
         if not submission:
             raise ValueError(f"Submission not found: {submission_id}")
         
         submission.status = status
         
+        if date_shipped:
+            submission.date_shipped = date_shipped
         if date_received:
             submission.date_received = date_received
         if date_graded:
             submission.date_graded = date_graded
         if date_shipped_back:
             submission.date_shipped_back = date_shipped_back
+        if date_returned:
+            submission.date_returned = date_returned
+        if shipping_to_tracking:
+            submission.shipping_to_tracking = shipping_to_tracking
         if shipping_return_tracking:
             submission.shipping_return_tracking = shipping_return_tracking
         
@@ -254,13 +267,13 @@ class GradingService:
         await self.db.refresh(submission)
         return submission
     
-    async def process_graded_items(
+    async def process_grading_results(
         self,
         submission_id: UUID,
-        item_results: list[dict],  # [{item_id, status, grade_value?, auto_grade?, cert_number?, label_type?}]
+        item_results: list[dict],  # [{item_id, status, grade_value?, auto_grade?, cert_number?, label_type?, notes?}]
         date_returned: Optional[date] = None,
         shipping_return_cost: Decimal = Decimal("0"),
-    ) -> GradingSubmission:
+    ) -> CardGradingSubmission:
         """
         Process graded items when submission returns.
         
@@ -271,7 +284,7 @@ class GradingService:
         if not submission:
             raise ValueError(f"Submission not found: {submission_id}")
         
-        grading_company = submission.grading_company
+        grading_company = submission.company
         cards_graded = 0
         
         for result in item_results:
@@ -313,10 +326,8 @@ class GradingService:
                 target_inv.quantity += 1
                 
                 # Add costs (original cost + grading fee)
-                original_cost = item.source_inventory.total_cost if item.source_inventory else 0
-                target_inv.total_cost += original_cost + (item.fee_per_card or 0)
-                
-                item.target_inventory_id = target_inv.id
+                original_cost = item.inventory.total_cost if item.inventory else Decimal("0")
+                target_inv.total_cost += original_cost + (item.fee_per_card or Decimal("0"))
                 
             elif status == "authentic":
                 # Authenticated but not graded numerically
@@ -333,20 +344,18 @@ class GradingService:
                 )
                 
                 target_inv.quantity += 1
-                original_cost = item.source_inventory.total_cost if item.source_inventory else 0
-                target_inv.total_cost += original_cost + (item.fee_per_card or 0)
-                
-                item.target_inventory_id = target_inv.id
+                original_cost = item.inventory.total_cost if item.inventory else Decimal("0")
+                target_inv.total_cost += original_cost + (item.fee_per_card or Decimal("0"))
                 
             elif status == "ungradeable":
                 # Return to source inventory
-                if item.source_inventory:
-                    item.source_inventory.quantity += 1
+                if item.inventory:
+                    item.inventory.quantity += 1
             
             # For 'altered', 'counterfeit', 'lost' - cards are effectively gone or worthless
         
         # Update submission
-        submission.status = "complete"
+        submission.status = "returned"
         submission.date_returned = date_returned or date.today()
         submission.shipping_return_cost = shipping_return_cost
         submission.cards_graded = cards_graded
@@ -406,21 +415,21 @@ class GradingService:
         # Pending submissions
         pending_query = (
             select(
-                func.count(GradingSubmission.id).label("count"),
-                func.sum(GradingSubmission.total_cards).label("cards"),
-                func.sum(GradingSubmission.grading_fee).label("fees"),
+                func.count(CardGradingSubmission.id).label("count"),
+                func.sum(CardGradingSubmission.total_cards).label("cards"),
+                func.sum(CardGradingSubmission.grading_fee).label("fees"),
             )
-            .where(GradingSubmission.status.in_(["preparing", "shipped", "received", "grading"]))
+            .where(CardGradingSubmission.status.in_(["pending", "shipped", "received", "grading"]))
         )
         
         # Grade distribution
         grade_query = (
             select(
-                GradingSubmissionItem.grade_value,
-                func.count(GradingSubmissionItem.id).label("count"),
+                CardGradingItem.grade_value,
+                func.count(CardGradingItem.id).label("count"),
             )
-            .where(GradingSubmissionItem.status == "graded")
-            .group_by(GradingSubmissionItem.grade_value)
+            .where(CardGradingItem.status == "graded")
+            .group_by(CardGradingItem.grade_value)
         )
         
         pending_result = await self.db.execute(pending_query)
@@ -446,24 +455,29 @@ class GradingService:
         """Get pending submissions grouped by grading company."""
         query = (
             select(
+                GradingCompany.id,
                 GradingCompany.name,
                 GradingCompany.code,
-                func.count(GradingSubmission.id).label("submissions"),
-                func.sum(GradingSubmission.total_cards).label("cards"),
+                func.count(CardGradingSubmission.id).label("submissions"),
+                func.sum(CardGradingSubmission.total_cards).label("cards"),
+                func.sum(CardGradingSubmission.total_declared_value).label("value"),
+                func.min(CardGradingSubmission.date_submitted).label("oldest"),
             )
-            .select_from(GradingSubmission)
+            .select_from(CardGradingSubmission)
             .join(GradingCompany)
-            .where(GradingSubmission.status.in_(["preparing", "shipped", "received", "grading"]))
-            .group_by(GradingCompany.name, GradingCompany.code)
+            .where(CardGradingSubmission.status.in_(["pending", "shipped", "received", "grading"]))
+            .group_by(GradingCompany.id, GradingCompany.name, GradingCompany.code)
         )
         
         result = await self.db.execute(query)
         return [
             {
-                "company": row.name,
-                "code": row.code,
-                "pending_submissions": row.submissions,
-                "cards_out": row.cards or 0,
+                "company_id": str(row.id),
+                "company_name": row.name,
+                "company_code": row.code,
+                "pending_count": row.cards or 0,
+                "pending_value": row.value or Decimal("0"),
+                "oldest_submission_date": row.oldest,
             }
             for row in result.all()
         ]
