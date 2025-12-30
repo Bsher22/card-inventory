@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import Checklist, Player, ProductLine, Inventory
+from app.models import Checklist, Player, ProductLine, Inventory, Brand
 from app.schemas import (
     ChecklistCreate, ChecklistUpdate, ChecklistResponse, ChecklistWithDetails,
     ChecklistUploadResult, ChecklistUploadPreview, PlayerResponse
@@ -41,7 +41,7 @@ async def list_checklists(
         .options(
             selectinload(Checklist.player),
             selectinload(Checklist.card_type),
-            selectinload(Checklist.product_line),
+            selectinload(Checklist.product_line).selectinload(ProductLine.brand),
         )
     )
     
@@ -107,7 +107,7 @@ async def get_checklist(
         .options(
             selectinload(Checklist.player),
             selectinload(Checklist.card_type),
-            selectinload(Checklist.product_line),
+            selectinload(Checklist.product_line).selectinload(ProductLine.brand),
             selectinload(Checklist.inventory_items),
         )
         .where(Checklist.id == checklist_id)
