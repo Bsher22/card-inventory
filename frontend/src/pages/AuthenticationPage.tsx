@@ -114,7 +114,7 @@ function ItemSearchModal({
 
   const { data: standaloneItems, isLoading: loadingItems } = useQuery({
     queryKey: ['standalone-items-search-auth', searchTerm],
-    queryFn: () => api.standaloneItems.getItems({
+    queryFn: () => api.standaloneItems.getStandaloneItems({
       search: searchTerm || undefined,
       limit: 50,
     }),
@@ -122,7 +122,7 @@ function ItemSearchModal({
   });
 
   const filteredCards = inventory?.filter((i) => !excludeCardIds.includes(i.id)) || [];
-  const filteredItems = standaloneItems?.filter((i) => !excludeStandaloneIds.includes(i.id)) || [];
+  const filteredItems = standaloneItems?.filter((i: StandaloneItem) => !excludeStandaloneIds.includes(i.id)) || [];
 
   if (!isOpen) return null;
 
@@ -221,7 +221,7 @@ function ItemSearchModal({
               </div>
             ) : (
               <div className="space-y-2">
-                {filteredItems.map((item) => (
+                {filteredItems.map((item: StandaloneItem) => (
                   <button
                     key={item.id}
                     onClick={() => {
@@ -231,15 +231,15 @@ function ItemSearchModal({
                     className="w-full text-left p-3 rounded-lg border hover:bg-blue-50 hover:border-blue-300 transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">{item.name}</span>
+                      <span className="font-medium text-gray-900">{item.title}</span>
                       <span className={`px-1.5 py-0.5 text-xs rounded ${
-                        item.item_type === 'memorabilia' ? 'bg-yellow-100 text-yellow-700' : 'bg-purple-100 text-purple-700'
+                        item.category?.slug === 'memorabilia' ? 'bg-yellow-100 text-yellow-700' : 'bg-purple-100 text-purple-700'
                       }`}>
-                        {item.item_type}
+                        {item.category?.name || item.item_type}
                       </span>
                     </div>
                     <div className="text-sm text-gray-500 mt-1">
-                      {item.category} • {item.signer_name || 'Unknown signer'}
+                      {item.sport} • {item.player_name || 'Unknown signer'}
                     </div>
                   </button>
                 ))}
@@ -322,13 +322,14 @@ function NewAuthSubmissionModal({ isOpen, onClose, onSuccess, companies }: NewAu
   };
 
   const handleAddStandaloneItem = (item: StandaloneItem) => {
+    const itemType = item.category?.slug === 'memorabilia' ? 'memorabilia' : 'collectible';
     setItems(prev => [...prev, {
       id: crypto.randomUUID(),
-      item_type: item.item_type === 'memorabilia' ? 'memorabilia' : 'collectible',
+      item_type: itemType,
       standalone_item: item,
-      description: item.name,
-      signer_name: item.signer_name || '',
-      declared_value: item.purchase_price || 0,
+      description: item.title,
+      signer_name: item.player_name || '',
+      declared_value: 0, // No purchase_price on StandaloneItem, user can edit
     }]);
   };
 
