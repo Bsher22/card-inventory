@@ -8,7 +8,7 @@ Separates:
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import (
@@ -19,6 +19,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from .base import Base
+
+if TYPE_CHECKING:
+    from .submitter import Submitter
 
 
 # ============================================
@@ -78,6 +81,9 @@ class CardGradingSubmission(Base):
     company_id: Mapped[UUID] = mapped_column(ForeignKey("grading_companies.id"), nullable=False)
     service_level_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("grading_service_levels.id"))
     
+    # Third-party submitter (PWCC, MySlabs, etc.) - NULL means direct submission
+    submitter_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("submitters.id", ondelete="SET NULL"))
+    
     # Identifiers
     submission_number: Mapped[Optional[str]] = mapped_column(String(50))
     reference_number: Mapped[Optional[str]] = mapped_column(String(50))
@@ -117,6 +123,7 @@ class CardGradingSubmission(Base):
     # Relationships
     company: Mapped["GradingCompany"] = relationship(lazy="selectin")
     service_level: Mapped[Optional["GradingServiceLevel"]] = relationship(lazy="selectin")
+    submitter: Mapped[Optional["Submitter"]] = relationship(back_populates="grading_submissions", lazy="selectin")
     items: Mapped[List["CardGradingItem"]] = relationship(
         back_populates="submission",
         cascade="all, delete-orphan",
@@ -178,6 +185,9 @@ class AuthSubmission(Base):
     company_id: Mapped[UUID] = mapped_column(ForeignKey("grading_companies.id"), nullable=False)
     service_level_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("grading_service_levels.id"))
     
+    # Third-party submitter (PWCC, MySlabs, etc.) - NULL means direct submission
+    submitter_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("submitters.id", ondelete="SET NULL"))
+    
     # Identifiers
     submission_number: Mapped[Optional[str]] = mapped_column(String(50))
     reference_number: Mapped[Optional[str]] = mapped_column(String(50))
@@ -217,6 +227,7 @@ class AuthSubmission(Base):
     # Relationships
     company: Mapped["GradingCompany"] = relationship(lazy="selectin")
     service_level: Mapped[Optional["GradingServiceLevel"]] = relationship(lazy="selectin")
+    submitter: Mapped[Optional["Submitter"]] = relationship(back_populates="auth_submissions", lazy="selectin")
     items: Mapped[List["AuthSubmissionItem"]] = relationship(
         back_populates="submission",
         cascade="all, delete-orphan",
@@ -281,3 +292,4 @@ class AuthSubmissionItem(Base):
 from app.models.inventory import Inventory
 from app.models.checklists import Checklist
 from app.models.standalone_items import StandaloneItem
+from app.models.submitter import Submitter

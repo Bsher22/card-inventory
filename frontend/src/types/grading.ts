@@ -63,6 +63,7 @@ export interface CardGradingSubmission {
   id: string;
   company_id: string;
   service_level_id: string | null;
+  submitter_id: string | null;
   submission_number: string | null;
   reference_number: string | null;
   date_submitted: string;
@@ -87,6 +88,7 @@ export interface CardGradingSubmission {
   company_name?: string;
   company_code?: string;
   service_level_name?: string;
+  submitter_name?: string;
 }
 
 export interface CardGradingItemCreate {
@@ -100,6 +102,7 @@ export interface CardGradingItemCreate {
 export interface CardGradingSubmissionCreate {
   company_id: string;
   service_level_id?: string;
+  submitter_id?: string;
   date_submitted: string;
   items: CardGradingItemCreate[];
   submission_number?: string;
@@ -182,6 +185,7 @@ export interface AuthSubmission {
   id: string;
   company_id: string;
   service_level_id: string | null;
+  submitter_id: string | null;
   submission_number: string | null;
   reference_number: string | null;
   date_submitted: string;
@@ -206,6 +210,7 @@ export interface AuthSubmission {
   company_name?: string;
   company_code?: string;
   service_level_name?: string;
+  submitter_name?: string;
 }
 
 export interface AuthItemCreate {
@@ -221,6 +226,7 @@ export interface AuthItemCreate {
 export interface AuthSubmissionCreate {
   company_id: string;
   service_level_id?: string;
+  submitter_id?: string;
   date_submitted: string;
   items: AuthItemCreate[];
   submission_number?: string;

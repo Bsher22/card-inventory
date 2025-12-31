@@ -86,6 +86,7 @@ class CardGradingSubmissionCreate(BaseModel):
     """Create a new grading submission."""
     company_id: UUID
     service_level_id: Optional[UUID] = None
+    submitter_id: Optional[UUID] = None  # Third-party submitter (NULL = direct)
     date_submitted: date
     items: List[CardGradingItemCreate]
     submission_number: Optional[str] = None
@@ -100,6 +101,7 @@ class CardGradingSubmissionResponse(BaseModel):
     id: UUID
     company_id: UUID
     service_level_id: Optional[UUID] = None
+    submitter_id: Optional[UUID] = None
     submission_number: Optional[str] = None
     reference_number: Optional[str] = None
     date_submitted: date
@@ -125,6 +127,7 @@ class CardGradingSubmissionResponse(BaseModel):
     company_name: Optional[str] = None
     company_code: Optional[str] = None
     service_level_name: Optional[str] = None
+    submitter_name: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -230,6 +233,7 @@ class AuthSubmissionCreate(BaseModel):
     """Create a new auth submission."""
     company_id: UUID
     service_level_id: Optional[UUID] = None
+    submitter_id: Optional[UUID] = None  # Third-party submitter (NULL = direct)
     date_submitted: date
     items: List[AuthItemCreate]
     submission_number: Optional[str] = None
@@ -244,6 +248,7 @@ class AuthSubmissionResponse(BaseModel):
     id: UUID
     company_id: UUID
     service_level_id: Optional[UUID] = None
+    submitter_id: Optional[UUID] = None
     submission_number: Optional[str] = None
     reference_number: Optional[str] = None
     date_submitted: date
@@ -269,6 +274,7 @@ class AuthSubmissionResponse(BaseModel):
     company_name: Optional[str] = None
     company_code: Optional[str] = None
     service_level_name: Optional[str] = None
+    submitter_name: Optional[str] = None
     
     class Config:
         from_attributes = True

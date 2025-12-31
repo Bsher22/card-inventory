@@ -83,6 +83,7 @@ class SignatureAuthService:
             .options(
                 selectinload(AuthSubmission.company),
                 selectinload(AuthSubmission.service_level),
+                selectinload(AuthSubmission.submitter),
                 selectinload(AuthSubmission.items),
             )
         )
@@ -115,6 +116,7 @@ class SignatureAuthService:
             .options(
                 selectinload(AuthSubmission.company),
                 selectinload(AuthSubmission.service_level),
+                selectinload(AuthSubmission.submitter),
                 selectinload(AuthSubmission.items)
                 .selectinload(AuthSubmissionItem.inventory)
                 .selectinload(Inventory.checklist)
@@ -134,6 +136,7 @@ class SignatureAuthService:
         date_submitted: date,
         items: List[Dict],
         service_level_id: Optional[UUID] = None,
+        submitter_id: Optional[UUID] = None,
         submission_number: Optional[str] = None,
         reference_number: Optional[str] = None,
         shipping_to_cost: Decimal = Decimal("0"),
@@ -151,6 +154,7 @@ class SignatureAuthService:
         submission = AuthSubmission(
             company_id=company_id,
             service_level_id=service_level_id,
+            submitter_id=submitter_id,
             submission_number=submission_number,
             reference_number=reference_number,
             date_submitted=date_submitted,
@@ -191,8 +195,9 @@ class SignatureAuthService:
                     inventory.quantity -= 1
         
         await self.db.flush()
-        await self.db.refresh(submission)
-        return submission
+        
+        # Reload with relationships
+        return await self.get_submission(submission.id)
 
     async def update_status(
         self,

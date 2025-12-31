@@ -147,6 +147,7 @@ async def create_submission(
             date_submitted=data.date_submitted,
             items=items,
             service_level_id=data.service_level_id,
+            submitter_id=data.submitter_id,
             submission_number=data.submission_number,
             reference_number=data.reference_number,
             shipping_to_cost=data.shipping_to_cost,
@@ -277,6 +278,7 @@ def _format_submission_response(submission) -> CardGradingSubmissionResponse:
         id=submission.id,
         company_id=submission.company_id,
         service_level_id=submission.service_level_id,
+        submitter_id=submission.submitter_id,
         submission_number=submission.submission_number,
         reference_number=submission.reference_number,
         date_submitted=submission.date_submitted,
@@ -300,4 +302,5 @@ def _format_submission_response(submission) -> CardGradingSubmissionResponse:
         company_name=submission.company.name if submission.company else None,
         company_code=submission.company.code if submission.company else None,
         service_level_name=submission.service_level.name if submission.service_level else None,
+        submitter_name=submission.submitter.name if submission.submitter else None,
     )
