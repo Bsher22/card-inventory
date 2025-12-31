@@ -51,4 +51,4 @@ export * from './ebay';
 // Grading Import
 export * from './grading';
 
-export * from './submitters';
+export * from './submitter';
