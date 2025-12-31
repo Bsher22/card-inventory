@@ -13,6 +13,7 @@ import {
   Award,
   Store,
   Trophy,
+  ShieldCheck,
 } from 'lucide-react';
 
 // Auth
@@ -32,6 +33,7 @@ import ChecklistUpload from './pages/ChecklistUpload';
 import Consigners from './pages/Consigners';
 import Consignments from './pages/Consignments';
 import GradingSubmissions from './pages/GradingSubmissions';
+import AuthenticationPage from './pages/AuthenticationPage';
 import EbayImport from './pages/EbayImport';
 import StandaloneItems from './pages/StandaloneItems';
 
@@ -53,7 +55,8 @@ const navItems = [
   { to: '/memorabilia', icon: Trophy, label: 'Memorabilia' },
   { to: '/consigners', icon: Users, label: 'Consigners' },
   { to: '/consignments', icon: Send, label: 'Consignments' },
-  { to: '/grading', icon: Award, label: 'PSA Submissions' },
+  { to: '/grading', icon: Award, label: 'Card Grading' },
+  { to: '/authentication', icon: ShieldCheck, label: 'Authentication' },
   { to: '/purchases', icon: ShoppingCart, label: 'Purchases' },
   { to: '/sales', icon: DollarSign, label: 'Sales' },
   { to: '/sales/ebay-import', icon: Store, label: 'eBay Import' },
@@ -72,7 +75,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           <p className="text-slate-400 text-sm mt-1">Management System</p>
         </div>
 
-        <nav className="mt-6 flex-1">
+        <nav className="mt-6 flex-1 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -199,6 +202,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <GradingSubmissions />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/authentication"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <AuthenticationPage />
                   </AppLayout>
                 </ProtectedRoute>
               }

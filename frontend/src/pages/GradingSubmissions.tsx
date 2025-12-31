@@ -31,8 +31,10 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
   pending: { bg: 'bg-amber-100', text: 'text-amber-700' },
   shipped: { bg: 'bg-blue-100', text: 'text-blue-700' },
   received: { bg: 'bg-purple-100', text: 'text-purple-700' },
-  graded: { bg: 'bg-green-100', text: 'text-green-700' },
-  returned: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  grading: { bg: 'bg-orange-100', text: 'text-orange-700' },
+  shipped_back: { bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  returned: { bg: 'bg-green-100', text: 'text-green-700' },
+  cancelled: { bg: 'bg-gray-100', text: 'text-gray-700' },
 };
 
 export default function GradingSubmissions() {
@@ -67,8 +69,8 @@ export default function GradingSubmissions() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Grading Submissions</h1>
-          <p className="text-gray-500 mt-1">Track PSA, BGS, and other grading submissions</p>
+          <h1 className="text-2xl font-bold text-gray-900">Card Grading</h1>
+          <p className="text-gray-500 mt-1">Track PSA, BGS, SGC and other grading submissions</p>
         </div>
         <button
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -140,7 +142,8 @@ export default function GradingSubmissions() {
             <option value="pending">Pending</option>
             <option value="shipped">Shipped</option>
             <option value="received">Received</option>
-            <option value="graded">Graded</option>
+            <option value="grading">Grading</option>
+            <option value="shipped_back">Shipped Back</option>
             <option value="returned">Returned</option>
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
