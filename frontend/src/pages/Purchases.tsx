@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -7,20 +7,80 @@ import {
   ChevronRight,
   Package,
   X,
-  Search,
   Trash2,
   ShoppingCart,
   Check,
   AlertCircle,
+  Copy,
+  Settings,
+  Zap,
 } from 'lucide-react';
 import { api } from '../api';
 import type {
   Purchase,
   PurchaseCreate,
-  PurchaseItemCreate,
-  Checklist,
-  ProductLine,
 } from '../types';
+
+// ============================================
+// CONSTANTS
+// ============================================
+
+const CARD_TYPE_OPTIONS = [
+  'Bowman',
+  'Bowman Chrome',
+  'Bowman Draft',
+  'Bowman Sapphire',
+  'Bowman Sterling',
+  "Bowman's Best",
+  'Topps Chrome',
+  'Topps',
+  'Other',
+];
+
+const PARALLEL_OPTIONS = [
+  'Base',
+  'Refractor',
+  'Gold',
+  'Gold Refractor',
+  'Orange',
+  'Orange Refractor',
+  'Blue',
+  'Blue Refractor',
+  'Purple',
+  'Purple Refractor',
+  'Green',
+  'Green Refractor',
+  'Red',
+  'Red Refractor',
+  'Black',
+  'Black Refractor',
+  'Atomic',
+  'X-Fractor',
+  'Prism',
+  'Shimmer',
+  'Speckle',
+  'Mojo',
+  'Aqua',
+  'Pink',
+  'Yellow',
+  'Superfractor',
+  'Printing Plate',
+  'Other',
+];
+
+const PLATFORM_OPTIONS = [
+  'eBay',
+  'COMC',
+  'MySlabs',
+  'Mercari',
+  'Facebook',
+  'Twitter/X',
+  'Instagram',
+  'Card Show',
+  'LCS',
+  'Direct',
+  'Other',
+];
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -46,127 +106,151 @@ function getTodayString(): string {
 }
 
 // ============================================
-// CARD SEARCH MODAL COMPONENT
+// QUICK CARD ENTRY ROW
 // ============================================
 
-interface CardSearchModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelect: (card: Checklist) => void;
-  excludeIds?: string[];
+interface CardLineItem {
+  id: string;
+  year: number;
+  card_type: string;
+  player: string;
+  parallel: string;
+  quantity: number;
+  unit_price: number;
+  is_signed: boolean;
+  is_auto: boolean;
 }
 
-function CardSearchModal({ isOpen, onClose, onSelect, excludeIds = [] }: CardSearchModalProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProductLine, setSelectedProductLine] = useState<string>('');
+interface QuickCardRowProps {
+  item: CardLineItem;
+  onUpdate: (id: string, updates: Partial<CardLineItem>) => void;
+  onRemove: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  inputRef?: React.RefObject<HTMLInputElement>;
+  isFirst?: boolean;
+}
 
-  const { data: productLines } = useQuery({
-    queryKey: ['productLines'],
-    queryFn: () => api.products.getProductLines(),
-  });
-
-  const { data: checklists, isLoading } = useQuery({
-    queryKey: ['checklists', selectedProductLine, searchTerm],
-    queryFn: () =>
-      api.checklists.getChecklists({
-        product_line_id: selectedProductLine || undefined,
-        search: searchTerm || undefined,
-        limit: 50,
-      }),
-    enabled: isOpen,
-  });
-
-  const filteredCards = checklists?.filter((c) => !excludeIds.includes(c.id)) || [];
-
-  if (!isOpen) return null;
-
+function QuickCardRow({ item, onUpdate, onRemove, onDuplicate, inputRef, isFirst }: QuickCardRowProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Search Cards</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
-            <X size={20} />
-          </button>
-        </div>
+    <div className="grid grid-cols-12 gap-2 items-center py-2 px-3 bg-white rounded-lg border hover:border-blue-300 transition-colors">
+      {/* Year */}
+      <div className="col-span-1">
+        <input
+          type="number"
+          value={item.year}
+          onChange={(e) => onUpdate(item.id, { year: parseInt(e.target.value) || 2024 })}
+          min={1990}
+          max={2030}
+          className="w-full px-2 py-1.5 border rounded text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Year"
+        />
+      </div>
 
-        {/* Filters */}
-        <div className="p-4 border-b space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by player name or card number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              autoFocus
-            />
-          </div>
-          <select
-            value={selectedProductLine}
-            onChange={(e) => setSelectedProductLine(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Product Lines</option>
-            {productLines?.map((pl) => (
-              <option key={pl.id} value={pl.id}>
-                {pl.year} {pl.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Card Type */}
+      <div className="col-span-2">
+        <select
+          value={item.card_type}
+          onChange={(e) => onUpdate(item.id, { card_type: e.target.value })}
+          className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          {CARD_TYPE_OPTIONS.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+      </div>
 
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            </div>
-          ) : filteredCards.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              {searchTerm || selectedProductLine
-                ? 'No cards found matching your search'
-                : 'Enter a search term or select a product line'}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredCards.map((card) => (
-                <button
-                  key={card.id}
-                  onClick={() => {
-                    onSelect(card);
-                    onClose();
-                  }}
-                  className="w-full text-left p-3 rounded-lg border hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-gray-900">
-                        #{card.card_number} - {card.player_name_raw}
-                      </span>
-                      {card.is_autograph && (
-                        <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">
-                          AUTO
-                        </span>
-                      )}
-                      {card.is_rookie_card && (
-                        <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">
-                          RC
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-gray-500">{card.team}</span>
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {card.set_name || card.product_line?.name}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Parallel */}
+      <div className="col-span-2">
+        <select
+          value={item.parallel}
+          onChange={(e) => onUpdate(item.id, { parallel: e.target.value })}
+          className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          {PARALLEL_OPTIONS.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Player */}
+      <div className="col-span-3">
+        <input
+          ref={isFirst ? inputRef : undefined}
+          type="text"
+          value={item.player}
+          onChange={(e) => onUpdate(item.id, { player: e.target.value })}
+          placeholder="Player name *"
+          className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+
+      {/* Quantity */}
+      <div className="col-span-1">
+        <input
+          type="number"
+          value={item.quantity}
+          onChange={(e) => onUpdate(item.id, { quantity: parseInt(e.target.value) || 1 })}
+          min={1}
+          className="w-full px-2 py-1.5 border rounded text-sm text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+
+      {/* Signed & Auto */}
+      <div className="col-span-1 flex items-center justify-center gap-2">
+        <label className="flex items-center gap-0.5 cursor-pointer" title="Card bought already signed">
+          <input
+            type="checkbox"
+            checked={item.is_signed}
+            onChange={(e) => onUpdate(item.id, { is_signed: e.target.checked })}
+            className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+          />
+          <span className="text-xs text-gray-500">S</span>
+        </label>
+        <label className="flex items-center gap-0.5 cursor-pointer" title="Pack-pulled autograph">
+          <input
+            type="checkbox"
+            checked={item.is_auto}
+            onChange={(e) => onUpdate(item.id, { is_auto: e.target.checked })}
+            className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+          />
+          <span className="text-xs text-gray-500">A</span>
+        </label>
+      </div>
+
+      {/* Price */}
+      <div className="col-span-1">
+        <div className="relative">
+          <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+          <input
+            type="number"
+            value={item.unit_price || ''}
+            onChange={(e) => onUpdate(item.id, { unit_price: parseFloat(e.target.value) || 0 })}
+            min={0}
+            step={0.01}
+            placeholder="0.00"
+            className="w-full pl-5 pr-1 py-1.5 border rounded text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
+      </div>
+
+      {/* Actions */}
+      <div className="col-span-1 flex items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={() => onDuplicate(item.id)}
+          className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+          title="Duplicate row"
+        >
+          <Copy size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onRemove(item.id)}
+          className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+          title="Remove"
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   );
@@ -176,15 +260,6 @@ function CardSearchModal({ isOpen, onClose, onSelect, excludeIds = [] }: CardSea
 // PURCHASE FORM MODAL COMPONENT
 // ============================================
 
-interface LineItem {
-  id: string;
-  checklist: Checklist;
-  quantity: number;
-  unit_price: number;
-  condition: string;
-  notes: string;
-}
-
 interface PurchaseFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -193,12 +268,20 @@ interface PurchaseFormModalProps {
 
 function PurchaseFormModal({ isOpen, onClose, onSuccess }: PurchaseFormModalProps) {
   const queryClient = useQueryClient();
-  const [showCardSearch, setShowCardSearch] = useState(false);
+  const playerInputRef = useRef<HTMLInputElement>(null);
   const [addToInventory, setAddToInventory] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
 
-  // Form state
-  const [formData, setFormData] = useState({
+  // Default values that persist (user preferences)
+  const [defaults, setDefaults] = useState({
+    year: new Date().getFullYear(),
+    card_type: 'Bowman Chrome',
+    parallel: 'Base',
+  });
+
+  // Purchase metadata
+  const [purchaseInfo, setPurchaseInfo] = useState({
     purchase_date: getTodayString(),
     vendor: '',
     platform: '',
@@ -208,11 +291,26 @@ function PurchaseFormModal({ isOpen, onClose, onSuccess }: PurchaseFormModalProp
     notes: '',
   });
 
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  // Card line items
+  const [lineItems, setLineItems] = useState<CardLineItem[]>([]);
+
+  // Initialize with one empty row
+  useEffect(() => {
+    if (isOpen && lineItems.length === 0) {
+      addNewRow();
+    }
+  }, [isOpen]);
+
+  // Focus player input when modal opens
+  useEffect(() => {
+    if (isOpen && playerInputRef.current) {
+      setTimeout(() => playerInputRef.current?.focus(), 100);
+    }
+  }, [isOpen, lineItems.length]);
 
   // Calculate totals
   const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-  const total = subtotal + formData.shipping + formData.tax;
+  const total = subtotal + purchaseInfo.shipping + purchaseInfo.tax;
 
   // Mutation
   const createMutation = useMutation({
@@ -229,8 +327,48 @@ function PurchaseFormModal({ isOpen, onClose, onSuccess }: PurchaseFormModalProp
     },
   });
 
+  const addNewRow = () => {
+    const newItem: CardLineItem = {
+      id: crypto.randomUUID(),
+      year: defaults.year,
+      card_type: defaults.card_type,
+      parallel: defaults.parallel,
+      player: '',
+      quantity: 1,
+      unit_price: 0,
+      is_signed: false,
+      is_auto: false,
+    };
+    setLineItems((prev) => [...prev, newItem]);
+  };
+
+  const handleUpdateItem = (id: string, updates: Partial<CardLineItem>) => {
+    setLineItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+    );
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setLineItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleDuplicateItem = (id: string) => {
+    const item = lineItems.find((i) => i.id === id);
+    if (item) {
+      const newItem: CardLineItem = {
+        ...item,
+        id: crypto.randomUUID(),
+        player: '', // Clear player for new entry
+      };
+      const index = lineItems.findIndex((i) => i.id === id);
+      const newItems = [...lineItems];
+      newItems.splice(index + 1, 0, newItem);
+      setLineItems(newItems);
+    }
+  };
+
   const handleClose = () => {
-    setFormData({
+    setPurchaseInfo({
       purchase_date: getTodayString(),
       vendor: '',
       platform: '',
@@ -241,390 +379,341 @@ function PurchaseFormModal({ isOpen, onClose, onSuccess }: PurchaseFormModalProp
     });
     setLineItems([]);
     setError(null);
+    setShowOptions(false);
     onClose();
-  };
-
-  const handleAddCard = (card: Checklist) => {
-    setLineItems((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        checklist: card,
-        quantity: 1,
-        unit_price: 0,
-        condition: 'NM',
-        notes: '',
-      },
-    ]);
-  };
-
-  const handleUpdateLineItem = (id: string, updates: Partial<LineItem>) => {
-    setLineItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
-  };
-
-  const handleRemoveLineItem = (id: string) => {
-    setLineItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (lineItems.length === 0) {
-      setError('Please add at least one card to the purchase');
+    // Validate
+    const validItems = lineItems.filter((item) => item.player.trim());
+    if (validItems.length === 0) {
+      setError('Please add at least one card with a player name');
       return;
     }
 
     const purchaseData: PurchaseCreate = {
-      purchase_date: formData.purchase_date,
-      vendor: formData.vendor || null,
-      platform: formData.platform || null,
-      order_number: formData.order_number || null,
-      shipping: formData.shipping,
-      tax: formData.tax,
-      notes: formData.notes || null,
-      items: lineItems.map((item) => ({
-        checklist_id: item.checklist.id,
+      purchase_date: purchaseInfo.purchase_date,
+      vendor: purchaseInfo.vendor || null,
+      platform: purchaseInfo.platform || null,
+      order_number: purchaseInfo.order_number || null,
+      shipping: purchaseInfo.shipping,
+      tax: purchaseInfo.tax,
+      notes: purchaseInfo.notes || null,
+      items: validItems.map((item) => ({
+        year: item.year,
+        card_type: item.card_type,
+        player: item.player.trim(),
+        parallel: item.parallel,
         quantity: item.quantity,
         unit_price: item.unit_price,
-        condition: item.condition,
-        notes: item.notes || null,
+        is_signed: item.is_signed,
+        is_auto: item.is_auto,
+        condition: 'Raw',
       })),
     };
 
     createMutation.mutate({ purchase: purchaseData, addToInventory });
   };
 
+  // Keyboard shortcut to add new row
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      addNewRow();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <ShoppingCart className="text-blue-600" size={20} />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900">Record Purchase</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 p-4">
+      <div 
+        className="bg-gray-50 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col"
+        onKeyDown={handleKeyDown}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b bg-white rounded-t-xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Zap className="text-blue-600" size={20} />
             </div>
-            <button onClick={handleClose} className="p-1 hover:bg-gray-100 rounded">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Quick Add Cards</h2>
+              <p className="text-sm text-gray-500">Fast entry for card purchases</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowOptions(!showOptions)}
+              className={`p-2 rounded-lg transition-colors ${showOptions ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`}
+              title="Purchase options"
+            >
+              <Settings size={18} />
+            </button>
+            <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-lg">
               <X size={20} />
             </button>
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-            <div className="p-6 space-y-6">
-              {/* Error */}
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                  <AlertCircle size={18} />
-                  <span>{error}</span>
-                </div>
-              )}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          {/* Error */}
+          {error && (
+            <div className="mx-4 mt-4 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          )}
 
-              {/* Purchase Details */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Options Panel (collapsible) */}
+          {showOptions && (
+            <div className="mx-4 mt-4 p-4 bg-white rounded-lg border">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Purchase Details</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Purchase Date *
-                  </label>
+                  <label className="block text-xs text-gray-500 mb-1">Date</label>
                   <input
                     type="date"
-                    value={formData.purchase_date}
-                    onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
+                    value={purchaseInfo.purchase_date}
+                    onChange={(e) => setPurchaseInfo({ ...purchaseInfo, purchase_date: e.target.value })}
+                    className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                  <label className="block text-xs text-gray-500 mb-1">Vendor</label>
                   <input
                     type="text"
-                    value={formData.vendor}
-                    onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
-                    placeholder="e.g., Card Shop, eBay Seller"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={purchaseInfo.vendor}
+                    onChange={(e) => setPurchaseInfo({ ...purchaseInfo, vendor: e.target.value })}
+                    placeholder="Seller name"
+                    className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                  <label className="block text-xs text-gray-500 mb-1">Platform</label>
                   <select
-                    value={formData.platform}
-                    onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={purchaseInfo.platform}
+                    onChange={(e) => setPurchaseInfo({ ...purchaseInfo, platform: e.target.value })}
+                    className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select...</option>
-                    <option value="eBay">eBay</option>
-                    <option value="COMC">COMC</option>
-                    <option value="MySlabs">MySlabs</option>
-                    <option value="In Person">In Person</option>
-                    <option value="Facebook">Facebook</option>
-                    <option value="Other">Other</option>
+                    {PLATFORM_OPTIONS.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Order Number
-                  </label>
+                  <label className="block text-xs text-gray-500 mb-1">Order #</label>
                   <input
                     type="text"
-                    value={formData.order_number}
-                    onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
+                    value={purchaseInfo.order_number}
+                    onChange={(e) => setPurchaseInfo({ ...purchaseInfo, order_number: e.target.value })}
                     placeholder="Optional"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3 mt-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Shipping</label>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={purchaseInfo.shipping || ''}
+                      onChange={(e) => setPurchaseInfo({ ...purchaseInfo, shipping: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
+                      className="w-full pl-6 pr-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Tax</label>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={purchaseInfo.tax || ''}
+                      onChange={(e) => setPurchaseInfo({ ...purchaseInfo, tax: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
+                      className="w-full pl-6 pr-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Notes</label>
+                  <input
+                    type="text"
+                    value={purchaseInfo.notes}
+                    onChange={(e) => setPurchaseInfo({ ...purchaseInfo, notes: e.target.value })}
+                    placeholder="Optional"
+                    className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              {/* Line Items */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-sm font-medium text-gray-700">Cards *</label>
+              <div className="mt-3 pt-3 border-t">
+                <h4 className="text-xs font-medium text-gray-500 mb-2">Default Values for New Rows</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Default Year</label>
+                    <input
+                      type="number"
+                      value={defaults.year}
+                      onChange={(e) => setDefaults({ ...defaults, year: parseInt(e.target.value) || 2024 })}
+                      min={1990}
+                      max={2030}
+                      className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Default Card Type</label>
+                    <select
+                      value={defaults.card_type}
+                      onChange={(e) => setDefaults({ ...defaults, card_type: e.target.value })}
+                      className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      {CARD_TYPE_OPTIONS.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Default Parallel</label>
+                    <select
+                      value={defaults.parallel}
+                      onChange={(e) => setDefaults({ ...defaults, parallel: e.target.value })}
+                      className="w-full px-2 py-1.5 border rounded text-sm focus:ring-2 focus:ring-blue-500"
+                    >
+                      {PARALLEL_OPTIONS.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Card Entry Area */}
+          <div className="p-4">
+            {/* Column Headers */}
+            <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium text-gray-500 uppercase">
+              <div className="col-span-1">Year</div>
+              <div className="col-span-2">Card Type</div>
+              <div className="col-span-2">Parallel</div>
+              <div className="col-span-3">Player</div>
+              <div className="col-span-1 text-center">Qty</div>
+              <div className="col-span-1 text-center" title="S = Signed (bought signed), A = Auto (pack-pulled)">S / A</div>
+              <div className="col-span-1 text-right">Price</div>
+              <div className="col-span-1"></div>
+            </div>
+
+            {/* Card Rows */}
+            <div className="space-y-2">
+              {lineItems.map((item, index) => (
+                <QuickCardRow
+                  key={item.id}
+                  item={item}
+                  onUpdate={handleUpdateItem}
+                  onRemove={handleRemoveItem}
+                  onDuplicate={handleDuplicateItem}
+                  inputRef={index === lineItems.length - 1 ? playerInputRef : undefined}
+                  isFirst={index === lineItems.length - 1}
+                />
+              ))}
+            </div>
+
+            {/* Add Row Button */}
+            <button
+              type="button"
+              onClick={addNewRow}
+              className="mt-3 w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={18} />
+              <span>Add Card</span>
+              <span className="text-xs text-gray-400">(Ctrl+Enter)</span>
+            </button>
+          </div>
+
+          {/* Summary Footer */}
+          <div className="p-4 bg-white border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                {/* Inventory Toggle */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={addToInventory}
+                    onChange={(e) => setAddToInventory(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-600">Add to Inventory</span>
+                </label>
+
+                {/* Stats */}
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <span>
+                    <strong className="text-gray-900">{lineItems.filter(i => i.player.trim()).length}</strong> cards
+                  </span>
+                  <span>
+                    <strong className="text-gray-900">{lineItems.reduce((sum, i) => sum + (i.player.trim() ? i.quantity : 0), 0)}</strong> total qty
+                  </span>
+                  {(purchaseInfo.shipping > 0 || purchaseInfo.tax > 0) && (
+                    <span className="text-gray-400">
+                      +{formatCurrency(purchaseInfo.shipping + purchaseInfo.tax)} fees
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">Total</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatCurrency(total)}</div>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowCardSearch(true)}
-                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                    onClick={handleClose}
+                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    <Plus size={16} />
-                    Add Card
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={createMutation.isPending}
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {createMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={18} />
+                        Save Purchase
+                      </>
+                    )}
                   </button>
                 </div>
-
-                {lineItems.length === 0 ? (
-                  <div
-                    onClick={() => setShowCardSearch(true)}
-                    className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
-                  >
-                    <Package className="mx-auto text-gray-400 mb-2" size={32} />
-                    <p className="text-gray-500">Click to add cards to this purchase</p>
-                  </div>
-                ) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                            Card
-                          </th>
-                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase w-20">
-                            Qty
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-28">
-                            Unit Price
-                          </th>
-                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase w-24">
-                            Condition
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-24">
-                            Total
-                          </th>
-                          <th className="px-3 py-2 w-10"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {lineItems.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-3 py-2">
-                              <div className="font-medium text-gray-900">
-                                #{item.checklist.card_number} - {item.checklist.player_name_raw}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {item.checklist.set_name || item.checklist.product_line?.name}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) =>
-                                  handleUpdateLineItem(item.id, {
-                                    quantity: parseInt(e.target.value) || 1,
-                                  })
-                                }
-                                className="w-full px-2 py-1 border rounded text-center"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
-                                  $
-                                </span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={item.unit_price}
-                                  onChange={(e) =>
-                                    handleUpdateLineItem(item.id, {
-                                      unit_price: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  className="w-full pl-6 pr-2 py-1 border rounded text-right"
-                                />
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <select
-                                value={item.condition}
-                                onChange={(e) =>
-                                  handleUpdateLineItem(item.id, { condition: e.target.value })
-                                }
-                                className="w-full px-2 py-1 border rounded text-sm"
-                              >
-                                <option value="NM">NM</option>
-                                <option value="EX">EX</option>
-                                <option value="VG">VG</option>
-                                <option value="G">G</option>
-                                <option value="P">P</option>
-                              </select>
-                            </td>
-                            <td className="px-3 py-2 text-right font-medium text-gray-900">
-                              {formatCurrency(item.quantity * item.unit_price)}
-                            </td>
-                            <td className="px-3 py-2">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveLineItem(item.id)}
-                                className="p-1 text-gray-400 hover:text-red-600"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
               </div>
-
-              {/* Costs */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.shipping}
-                      onChange={(e) =>
-                        setFormData({ ...formData, shipping: parseFloat(e.target.value) || 0 })
-                      }
-                      className="w-full pl-7 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tax</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.tax}
-                      onChange={(e) =>
-                        setFormData({ ...formData, tax: parseFloat(e.target.value) || 0 })
-                      }
-                      className="w-full pl-7 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <input
-                    type="text"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Optional notes"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Summary */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Subtotal ({lineItems.length} cards)</span>
-                  <span className="font-medium">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">{formatCurrency(formData.shipping)}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="font-medium">{formatCurrency(formData.tax)}</span>
-                </div>
-                <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                  <span className="text-lg font-semibold text-gray-900">Total</span>
-                  <span className="text-lg font-bold text-gray-900">{formatCurrency(total)}</span>
-                </div>
-              </div>
-
-              {/* Add to Inventory Toggle */}
-              <label className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={addToInventory}
-                  onChange={(e) => setAddToInventory(e.target.checked)}
-                  className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
-                />
-                <div>
-                  <div className="font-medium text-gray-900">Add to Inventory</div>
-                  <div className="text-sm text-gray-600">
-                    Automatically add purchased cards to your inventory
-                  </div>
-                </div>
-              </label>
             </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-3 p-4 border-t bg-gray-50">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={createMutation.isPending}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {createMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Check size={18} />
-                    Record Purchase
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
-
-      {/* Card Search Modal */}
-      <CardSearchModal
-        isOpen={showCardSearch}
-        onClose={() => setShowCardSearch(false)}
-        onSelect={handleAddCard}
-        excludeIds={lineItems.map((i) => i.checklist.id)}
-      />
-    </>
+    </div>
   );
 }
 
