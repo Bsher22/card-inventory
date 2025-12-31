@@ -355,6 +355,19 @@ class CardGradingService:
         tens_count = grade_distribution.get("10.0", 0) + grade_distribution.get("10", 0)
         gem_rate = (tens_count / total_graded * 100) if total_graded > 0 else 0.0
         
+        # By company breakdown
+        by_company_query = (
+            select(
+                GradingCompany.code,
+                func.sum(CardGradingSubmission.cards_graded)
+            )
+            .join(CardGradingSubmission, CardGradingSubmission.company_id == GradingCompany.id)
+            .where(CardGradingSubmission.cards_graded > 0)
+            .group_by(GradingCompany.code)
+        )
+        by_company_result = await self.db.execute(by_company_query)
+        by_company = {row[0]: int(row[1] or 0) for row in by_company_result.all()}
+        
         return {
             "pending_submissions": pending_count,
             "cards_out_for_grading": cards_out,
@@ -362,6 +375,7 @@ class CardGradingService:
             "total_graded": total_graded,
             "grade_distribution": grade_distribution,
             "gem_rate": round(gem_rate, 1),
+            "by_company": by_company,
         }
 
     async def get_pending_by_company(self) -> List[Dict]:
