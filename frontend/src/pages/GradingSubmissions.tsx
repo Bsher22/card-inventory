@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 import type { 
-  CardGradingSubmissionResponse, 
-  CardGradingItemResponse,
+  CardGradingSubmission, 
+  CardGradingItem,
   GradingCompanyWithLevels,
   PendingByCompany 
 } from '../types';
@@ -42,23 +42,23 @@ export default function GradingSubmissions() {
 
   const { data: companies } = useQuery({
     queryKey: ['grading-companies'],
-    queryFn: () => api.getGradingCompanies(),
+    queryFn: () => api.grading.getCompanies(),
   });
 
   const { data: stats } = useQuery({
     queryKey: ['grading-stats'],
-    queryFn: () => api.getGradingStats(),
+    queryFn: () => api.grading.getStats(),
   });
 
   const { data: pendingByCompany } = useQuery({
     queryKey: ['pending-by-company'],
-    queryFn: () => api.getPendingByCompany(),
+    queryFn: () => api.grading.getPendingByCompany(),
   });
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['grading-submissions', filterCompany, filterStatus],
-    queryFn: () => api.getGradingSubmissions({
-      grading_company_id: filterCompany || undefined,
+    queryFn: () => api.grading.getSubmissions({
+      company_id: filterCompany || undefined,
       status: filterStatus || undefined,
     }),
   });
@@ -159,7 +159,7 @@ export default function GradingSubmissions() {
         </div>
       ) : (
         <div className="space-y-4">
-          {submissions?.map((submission: CardGradingSubmissionResponse) => (
+          {submissions?.map((submission: CardGradingSubmission) => (
             <SubmissionCard
               key={submission.id}
               submission={submission}
@@ -184,13 +184,13 @@ function SubmissionCard({
   isExpanded,
   onToggle,
 }: {
-  submission: CardGradingSubmissionResponse;
+  submission: CardGradingSubmission;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
   const statusStyle = STATUS_STYLES[submission.status] || STATUS_STYLES.pending;
   const totalCards = submission.total_cards || submission.items?.length || 0;
-  const gradedCards = submission.cards_graded || submission.items?.filter((i: CardGradingItemResponse) => i.grade_value !== null).length || 0;
+  const gradedCards = submission.cards_graded || submission.items?.filter((i: CardGradingItem) => i.grade_value !== null).length || 0;
   const totalCost = Number(submission.grading_fee || 0) + Number(submission.shipping_to_cost || 0);
 
   return (
@@ -285,7 +285,7 @@ function SubmissionCard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {submission.items?.map((item: CardGradingItemResponse) => (
+                {submission.items?.map((item: CardGradingItem) => (
                   <tr key={item.id}>
                     <td className="px-3 py-2 text-gray-900">
                       {item.player_name || 'Unknown'}
