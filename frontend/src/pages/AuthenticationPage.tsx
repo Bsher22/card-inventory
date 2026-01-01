@@ -298,7 +298,7 @@ function NewAuthSubmissionModal({ isOpen, onClose, onSuccess, companies }: NewAu
   // Fetch submitters for authentication
   const { data: submitters } = useQuery({
     queryKey: ['submitters-auth'],
-    queryFn: () => submittersApi.getSubmitters({ authentication: true }),
+    queryFn: () => submittersApi.getSubmitters({ auth_only: true }),
     enabled: isOpen,
   });
 

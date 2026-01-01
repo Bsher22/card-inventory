@@ -4,7 +4,7 @@
  * Manage third-party grading/authentication submission services.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -40,21 +40,56 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
   const isEditing = !!submitter;
 
   const [formData, setFormData] = useState<SubmitterCreate>({
-    name: submitter?.name || '',
-    code: submitter?.code || '',
-    website: submitter?.website || '',
-    contact_email: submitter?.contact_email || '',
-    contact_phone: submitter?.contact_phone || '',
-    offers_grading: submitter?.offers_grading ?? true,
-    offers_authentication: submitter?.offers_authentication ?? true,
-    is_active: submitter?.is_active ?? true,
-    notes: submitter?.notes || '',
+    name: '',
+    code: '',
+    website: '',
+    contact_email: '',
+    contact_phone: '',
+    offers_grading: true,
+    offers_authentication: true,
+    is_active: true,
+    is_default: false,
+    notes: '',
   });
 
   const [error, setError] = useState<string | null>(null);
 
+  // Reset form when modal opens/closes or submitter changes
+  useEffect(() => {
+    if (isOpen) {
+      if (submitter) {
+        setFormData({
+          name: submitter.name,
+          code: submitter.code || '',
+          website: submitter.website || '',
+          contact_email: submitter.contact_email || '',
+          contact_phone: submitter.contact_phone || '',
+          offers_grading: submitter.offers_grading,
+          offers_authentication: submitter.offers_authentication,
+          is_active: submitter.is_active,
+          is_default: submitter.is_default,
+          notes: submitter.notes || '',
+        });
+      } else {
+        setFormData({
+          name: '',
+          code: '',
+          website: '',
+          contact_email: '',
+          contact_phone: '',
+          offers_grading: true,
+          offers_authentication: true,
+          is_active: true,
+          is_default: false,
+          notes: '',
+        });
+      }
+      setError(null);
+    }
+  }, [isOpen, submitter]);
+
   const createMutation = useMutation({
-    mutationFn: submittersApi.createSubmitter,
+    mutationFn: (data: SubmitterCreate) => submittersApi.createSubmitter(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['submitters'] });
       onClose();
@@ -63,8 +98,7 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: SubmitterUpdate) => 
-      submittersApi.updateSubmitter(submitter!.id, data),
+    mutationFn: (data: SubmitterUpdate) => submittersApi.updateSubmitter(submitter!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['submitters'] });
       onClose();
@@ -72,34 +106,22 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
     onError: (err: Error) => setError(err.message),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
+  const handleSubmit = () => {
     if (!formData.name.trim()) {
       setError('Name is required');
       return;
     }
 
-    const data = {
-      ...formData,
-      code: formData.code || null,
-      website: formData.website || null,
-      contact_email: formData.contact_email || null,
-      contact_phone: formData.contact_phone || null,
-      notes: formData.notes || null,
-    };
-
     if (isEditing) {
-      updateMutation.mutate(data);
+      updateMutation.mutate(formData);
     } else {
-      createMutation.mutate(data as SubmitterCreate);
+      createMutation.mutate(formData);
     }
   };
 
   if (!isOpen) return null;
-
-  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -120,7 +142,7 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <form className="flex-1 overflow-y-auto p-6 space-y-4">
           {error && (
             <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
               <AlertCircle size={18} />
@@ -139,11 +161,11 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., PWCC, MySlabs, KK Sports"
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              autoFocus
+              required
             />
           </div>
 
-          {/* Code (Short Name) */}
+          {/* Code */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Short Code
@@ -152,11 +174,9 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
               type="text"
               value={formData.code || ''}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              placeholder="e.g., PWCC"
-              maxLength={20}
+              placeholder="e.g., PWCC, MSL"
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
-            <p className="text-xs text-gray-500 mt-1">Used in compact views (max 20 chars)</p>
           </div>
 
           {/* Website */}
@@ -168,70 +188,70 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
               type="url"
               value={formData.website || ''}
               onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-              placeholder="https://example.com"
+              placeholder="https://..."
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
-          {/* Contact Info */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={formData.contact_email || ''}
-                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                placeholder="contact@example.com"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={formData.contact_phone || ''}
-                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                placeholder="(555) 123-4567"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-
-          {/* Services */}
+          {/* Contact Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Services Offered
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contact Email
             </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.offers_grading}
-                  onChange={(e) => setFormData({ ...formData, offers_grading: e.target.checked })}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-                />
-                <Award size={16} className="text-blue-600" />
-                <span className="text-sm text-gray-700">Grading</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.offers_authentication}
-                  onChange={(e) => setFormData({ ...formData, offers_authentication: e.target.checked })}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-                />
-                <Shield size={16} className="text-green-600" />
-                <span className="text-sm text-gray-700">Authentication</span>
-              </label>
-            </div>
+            <input
+              type="email"
+              value={formData.contact_email || ''}
+              onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+              placeholder="contact@example.com"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+            />
           </div>
 
-          {/* Active */}
-          <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer">
+          {/* Contact Phone */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contact Phone
+            </label>
+            <input
+              type="tel"
+              value={formData.contact_phone || ''}
+              onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+              placeholder="(555) 123-4567"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Service Types */}
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={formData.offers_grading}
+                onChange={(e) => setFormData({ ...formData, offers_grading: e.target.checked })}
+                className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
+              />
+              <div className="flex items-center gap-2">
+                <Award size={18} className="text-blue-600" />
+                <span className="font-medium text-gray-900">Grading</span>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={formData.offers_authentication}
+                onChange={(e) => setFormData({ ...formData, offers_authentication: e.target.checked })}
+                className="w-5 h-5 rounded text-green-600 focus:ring-green-500"
+              />
+              <div className="flex items-center gap-2">
+                <Shield size={18} className="text-green-600" />
+                <span className="font-medium text-gray-900">Authentication</span>
+              </div>
+            </label>
+          </div>
+
+          {/* Active Status */}
+          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
             <input
               type="checkbox"
               checked={formData.is_active}
@@ -351,6 +371,13 @@ function SubmitterCard({ submitter, onEdit, onDelete, onSetDefault }: SubmitterC
         </div>
       </div>
 
+      {/* Short Code */}
+      {submitter.code && (
+        <div className="text-sm text-gray-500 mb-2">
+          Code: {submitter.code}
+        </div>
+      )}
+
       {/* Services */}
       <div className="flex items-center gap-3 mb-3">
         {submitter.offers_grading && (
@@ -377,7 +404,7 @@ function SubmitterCard({ submitter, onEdit, onDelete, onSetDefault }: SubmitterC
             className="flex items-center gap-2 hover:text-indigo-600"
           >
             <ExternalLink size={14} />
-            {submitter.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+            {submitter.website.replace(/^https?:\/\//, '')}
           </a>
         )}
         {submitter.contact_email && (
@@ -399,16 +426,12 @@ function SubmitterCard({ submitter, onEdit, onDelete, onSetDefault }: SubmitterC
           </a>
         )}
       </div>
-
-      {submitter.notes && (
-        <p className="mt-3 text-sm text-gray-500 border-t pt-3">{submitter.notes}</p>
-      )}
     </div>
   );
 }
 
 // ============================================
-// MAIN SUBMITTERS PAGE
+// MAIN PAGE
 // ============================================
 
 export default function Submitters() {
@@ -423,17 +446,13 @@ export default function Submitters() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: submittersApi.deleteSubmitter,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['submitters'] });
-    },
+    mutationFn: (id: string) => submittersApi.deleteSubmitter(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['submitters'] }),
   });
 
   const setDefaultMutation = useMutation({
-    mutationFn: submittersApi.setDefaultSubmitter,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['submitters'] });
-    },
+    mutationFn: (id: string) => submittersApi.setDefaultSubmitter(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['submitters'] }),
   });
 
   const handleEdit = (submitter: Submitter) => {
@@ -442,7 +461,7 @@ export default function Submitters() {
   };
 
   const handleDelete = (submitter: Submitter) => {
-    if (confirm(`Are you sure you want to delete "${submitter.name}"? This cannot be undone.`)) {
+    if (window.confirm(`Delete "${submitter.name}"? This cannot be undone.`)) {
       deleteMutation.mutate(submitter.id);
     }
   };

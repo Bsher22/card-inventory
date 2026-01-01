@@ -190,7 +190,7 @@ function NewGradingSubmissionModal({ isOpen, onClose, onSuccess, companies }: Ne
   // Fetch submitters for grading
   const { data: submitters } = useQuery({
     queryKey: ['submitters-grading'],
-    queryFn: () => submittersApi.getSubmitters({ grading: true }),
+    queryFn: () => submittersApi.getSubmitters({ grading_only: true }),
     enabled: isOpen,
   });
 
@@ -691,7 +691,7 @@ function SubmissionCard({
                 <Calendar size={14} />
                 {formatDate(submission.date_submitted)}
               </span>
-              <span>{submission.item_count} cards</span>
+              <span>{submission.items?.length || 0} cards</span>
               {submission.service_level_name && (
                 <span>{submission.service_level_name}</span>
               )}
@@ -705,7 +705,12 @@ function SubmissionCard({
           </span>
           <div className="text-right">
             <div className="text-sm text-gray-500">Total Fees</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(Number(submission.total_fees) || 0)}</div>
+            <div className="font-semibold text-gray-900">{formatCurrency(
+              Number(submission.grading_fee || 0) + 
+              Number(submission.shipping_to_cost || 0) + 
+              Number(submission.shipping_return_cost || 0) + 
+              Number(submission.insurance_cost || 0)
+            )}</div>
           </div>
         </div>
       </div>
