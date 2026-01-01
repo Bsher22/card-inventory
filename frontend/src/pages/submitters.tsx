@@ -41,7 +41,7 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
 
   const [formData, setFormData] = useState<SubmitterCreate>({
     name: submitter?.name || '',
-    short_name: submitter?.short_name || '',
+    code: submitter?.code || '',
     website: submitter?.website || '',
     contact_email: submitter?.contact_email || '',
     contact_phone: submitter?.contact_phone || '',
@@ -83,7 +83,7 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
 
     const data = {
       ...formData,
-      short_name: formData.short_name || null,
+      code: formData.code || null,
       website: formData.website || null,
       contact_email: formData.contact_email || null,
       contact_phone: formData.contact_phone || null,
@@ -143,15 +143,15 @@ function SubmitterFormModal({ isOpen, onClose, submitter }: SubmitterFormModalPr
             />
           </div>
 
-          {/* Short Name */}
+          {/* Code (Short Name) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Short Name
+              Short Code
             </label>
             <input
               type="text"
-              value={formData.short_name || ''}
-              onChange={(e) => setFormData({ ...formData, short_name: e.target.value })}
+              value={formData.code || ''}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
               placeholder="e.g., PWCC"
               maxLength={20}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
