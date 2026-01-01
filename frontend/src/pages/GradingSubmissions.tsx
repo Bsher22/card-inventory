@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, Package, Calendar, 
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 import { cardGradingApi } from '../api/gradingApi';
+import { submittersApi } from '../api/submittersApi';
 import type { 
   CardGradingSubmission, 
   CardGradingSubmissionCreate,
@@ -15,6 +16,7 @@ import type {
   GradingServiceLevel,
   PendingByCompany,
   Inventory,
+  SubmitterSummary,
 } from '../types';
 
 function formatCurrency(value: number): string {
@@ -182,7 +184,25 @@ function NewGradingSubmissionModal({ isOpen, onClose, onSuccess, companies }: Ne
     notes: '',
   });
 
+  const [submitterId, setSubmitterId] = useState<string>('');
   const [items, setItems] = useState<GradingItemRow[]>([]);
+
+  // Fetch submitters for grading
+  const { data: submitters } = useQuery({
+    queryKey: ['submitters-grading'],
+    queryFn: () => submittersApi.getSubmitters({ grading: true }),
+    enabled: isOpen,
+  });
+
+  // Set default submitter when data loads
+  useEffect(() => {
+    if (submitters && submitters.length > 0 && !submitterId) {
+      const defaultSubmitter = submitters.find((s: SubmitterSummary) => s.is_default);
+      if (defaultSubmitter) {
+        setSubmitterId(defaultSubmitter.id);
+      }
+    }
+  }, [submitters, submitterId]);
 
   // Get selected company's service levels
   const selectedCompany = companies.find(c => c.id === formData.company_id);
@@ -237,6 +257,7 @@ function NewGradingSubmissionModal({ isOpen, onClose, onSuccess, companies }: Ne
       insurance_cost: 0,
       notes: '',
     });
+    setSubmitterId('');
     setItems([]);
     setError(null);
     onClose();
@@ -265,6 +286,7 @@ function NewGradingSubmissionModal({ isOpen, onClose, onSuccess, companies }: Ne
     const submissionData: CardGradingSubmissionCreate = {
       company_id: formData.company_id,
       service_level_id: formData.service_level_id || undefined,
+      submitter_id: submitterId || undefined,
       date_submitted: formData.date_submitted,
       submission_number: formData.submission_number || undefined,
       reference_number: formData.reference_number || undefined,
@@ -353,6 +375,28 @@ function NewGradingSubmissionModal({ isOpen, onClose, onSuccess, companies }: Ne
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Submitted Through */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Submitted Through
+                </label>
+                <select
+                  value={submitterId}
+                  onChange={(e) => setSubmitterId(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Direct submission...</option>
+                  {submitters?.map((s: SubmitterSummary) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.is_default ? '(Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Third-party service used to submit cards (e.g., PWCC, MySlabs)
+                </p>
               </div>
 
               {/* Submission Details */}
@@ -618,105 +662,76 @@ function SubmissionCard({
   onToggle: () => void;
 }) {
   const statusStyle = STATUS_STYLES[submission.status] || STATUS_STYLES.pending;
-  const totalCards = submission.total_cards || submission.items?.length || 0;
-  const gradedCards = submission.cards_graded || submission.items?.filter((i: CardGradingItem) => i.grade_value !== null).length || 0;
-  const totalCost = Number(submission.grading_fee || 0) + Number(submission.shipping_to_cost || 0);
 
   return (
-    <div className={`bg-white rounded-xl border transition-all ${
-      isExpanded ? 'border-blue-200 shadow-md' : 'border-gray-100'
-    }`}>
-      <div 
-        className="p-6 cursor-pointer"
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      {/* Header Row */}
+      <div
         onClick={onToggle}
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
       >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              {isExpanded ? <ChevronDown className="text-blue-600" size={20} /> : <ChevronRight className="text-blue-600" size={20} />}
+        <div className="flex items-center gap-4">
+          <button className="p-1">
+            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-gray-900">{submission.company_name}</span>
+              {submission.submission_number && (
+                <span className="text-sm text-gray-500">#{submission.submission_number}</span>
+              )}
+              {submission.submitter_name && (
+                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                  via {submission.submitter_name}
+                </span>
+              )}
             </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h3 className="font-semibold text-gray-900">
-                  {submission.company_code || submission.company_name || 'Unknown'}
-                </h3>
-                {submission.submission_number && (
-                  <span className="text-sm text-gray-500">#{submission.submission_number}</span>
-                )}
-                <span className={`px-2 py-0.5 rounded text-xs ${statusStyle.bg} ${statusStyle.text}`}>
-                  {submission.status}
-                </span>
-              </div>
-              <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Calendar size={14} />
-                  {formatDate(submission.date_submitted)}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Package size={14} />
-                  {totalCards} cards
-                </span>
-              </div>
+            <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
+              <span className="flex items-center gap-1">
+                <Calendar size={14} />
+                {formatDate(submission.date_submitted)}
+              </span>
+              <span>{submission.item_count} cards</span>
+              {submission.service_level_name && (
+                <span>{submission.service_level_name}</span>
+              )}
             </div>
           </div>
+        </div>
 
+        <div className="flex items-center gap-4">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusStyle.bg} ${statusStyle.text}`}>
+            {submission.status.replace('_', ' ')}
+          </span>
           <div className="text-right">
-            <p className="text-xl font-bold text-gray-900">
-              {formatCurrency(totalCost)}
-            </p>
-            <p className="text-sm text-gray-500">
-              {gradedCards}/{totalCards} graded
-            </p>
+            <div className="text-sm text-gray-500">Total Fees</div>
+            <div className="font-semibold text-gray-900">{formatCurrency(Number(submission.total_fees) || 0)}</div>
           </div>
         </div>
       </div>
 
-      {/* Expanded Content */}
+      {/* Expanded Details */}
       {isExpanded && (
-        <div className="border-t border-gray-100 p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Submitted</p>
-              <p className="font-medium text-gray-900">{formatDate(submission.date_submitted)}</p>
-            </div>
-            {submission.date_returned && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Returned</p>
-                <p className="font-medium text-gray-900">{formatDate(submission.date_returned)}</p>
-              </div>
-            )}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Grading Fee</p>
-              <p className="font-medium text-gray-900">{formatCurrency(Number(submission.grading_fee) || 0)}</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Shipping</p>
-              <p className="font-medium text-gray-900">{formatCurrency(Number(submission.shipping_to_cost) || 0)}</p>
-            </div>
-          </div>
-
-          {submission.notes && (
-            <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-lg">
-              {submission.notes}
-            </p>
-          )}
-
-          {/* Items Table */}
-          <h4 className="font-medium text-gray-900 mb-3">Items ({submission.items?.length || 0})</h4>
-          <div className="bg-gray-50 rounded-lg overflow-hidden">
+        <div className="border-t px-4 py-4 bg-gray-50">
+          {/* Item List */}
+          <div className="bg-white rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 text-left text-gray-600">
-                  <th className="px-3 py-2 font-medium">Card</th>
-                  <th className="px-3 py-2 font-medium text-center">Declared</th>
-                  <th className="px-3 py-2 font-medium text-center">Grade</th>
-                  <th className="px-3 py-2 font-medium text-right">Cert #</th>
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Card #</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Player</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Declared</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Grade</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cert #</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y">
                 {submission.items?.map((item: CardGradingItem) => (
-                  <tr key={item.id}>
-                    <td className="px-3 py-2 text-gray-900">
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-gray-900">
+                      {item.card_number || '-'}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">
                       {item.player_name || 'Unknown'}
                     </td>
                     <td className="px-3 py-2 text-center text-gray-600">

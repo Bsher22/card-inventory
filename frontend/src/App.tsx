@@ -14,6 +14,7 @@ import {
   Store,
   Trophy,
   ShieldCheck,
+  Building2,
 } from 'lucide-react';
 
 // Auth
@@ -36,6 +37,7 @@ import GradingSubmissions from './pages/GradingSubmissions';
 import AuthenticationPage from './pages/AuthenticationPage';
 import EbayImport from './pages/EbayImport';
 import StandaloneItems from './pages/StandaloneItems';
+import Submitters from './pages/Submitters';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +59,7 @@ const navItems = [
   { to: '/consignments', icon: Send, label: 'Consignments' },
   { to: '/grading', icon: Award, label: 'Card Grading' },
   { to: '/authentication', icon: ShieldCheck, label: 'Authentication' },
+  { to: '/submitters', icon: Building2, label: 'Submitters' },
   { to: '/purchases', icon: ShoppingCart, label: 'Purchases' },
   { to: '/sales', icon: DollarSign, label: 'Sales' },
   { to: '/sales/ebay-import', icon: Store, label: 'eBay Import' },
@@ -212,6 +215,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <AuthenticationPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/submitters"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Submitters />
                   </AppLayout>
                 </ProtectedRoute>
               }

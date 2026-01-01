@@ -5,7 +5,7 @@
  * with tabs for Cards, Memorabilia, and Collectibles
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, 
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { signatureAuthApi } from '../api/gradingApi';
+import { submittersApi } from '../api/submittersApi';
 import { api } from '../api';
 import type { 
   AuthSubmission, 
@@ -36,6 +37,7 @@ import type {
   PendingByCompany,
   Inventory,
   StandaloneItem,
+  SubmitterSummary,
 } from '../types';
 
 function formatCurrency(value: number): string {
@@ -290,7 +292,25 @@ function NewAuthSubmissionModal({ isOpen, onClose, onSuccess, companies }: NewAu
     notes: '',
   });
 
+  const [submitterId, setSubmitterId] = useState<string>('');
   const [items, setItems] = useState<AuthItemRow[]>([]);
+
+  // Fetch submitters for authentication
+  const { data: submitters } = useQuery({
+    queryKey: ['submitters-auth'],
+    queryFn: () => submittersApi.getSubmitters({ authentication: true }),
+    enabled: isOpen,
+  });
+
+  // Set default submitter when data loads
+  useEffect(() => {
+    if (submitters && submitters.length > 0 && !submitterId) {
+      const defaultSubmitter = submitters.find((s: SubmitterSummary) => s.is_default);
+      if (defaultSubmitter) {
+        setSubmitterId(defaultSubmitter.id);
+      }
+    }
+  }, [submitters, submitterId]);
 
   // Filter to only auth companies
   const authCompanies = companies.filter(c => c.service_type === 'authentication' || c.service_type === 'both');
@@ -355,6 +375,7 @@ function NewAuthSubmissionModal({ isOpen, onClose, onSuccess, companies }: NewAu
       insurance_cost: 0,
       notes: '',
     });
+    setSubmitterId('');
     setItems([]);
     setError(null);
     onClose();
@@ -377,6 +398,7 @@ function NewAuthSubmissionModal({ isOpen, onClose, onSuccess, companies }: NewAu
     const submissionData: AuthSubmissionCreate = {
       company_id: formData.company_id,
       service_level_id: formData.service_level_id || undefined,
+      submitter_id: submitterId || undefined,
       date_submitted: formData.date_submitted,
       submission_number: formData.submission_number || undefined,
       reference_number: formData.reference_number || undefined,
@@ -467,6 +489,28 @@ function NewAuthSubmissionModal({ isOpen, onClose, onSuccess, companies }: NewAu
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Submitted Through */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Submitted Through
+                </label>
+                <select
+                  value={submitterId}
+                  onChange={(e) => setSubmitterId(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">Direct submission...</option>
+                  {submitters?.map((s: SubmitterSummary) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.is_default ? '(Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Third-party service used to submit items (e.g., PWCC, MySlabs)
+                </p>
               </div>
 
               {/* Submission Details */}
