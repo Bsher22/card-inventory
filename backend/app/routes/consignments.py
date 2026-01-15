@@ -15,59 +15,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.services.consignment_service import ConsignmentService
+from app.schemas.consignments import (
+    ConsignerCreate,
+    ConsignerUpdate,
+    ConsignerResponse,
+    ConsignerStats,
+)
 
 router = APIRouter()
 
 
 # ============================================
-# SCHEMAS
+# SCHEMAS (local ones for consignment operations)
 # ============================================
-
-class ConsignerCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    location: Optional[str] = None
-    default_fee: Optional[Decimal] = None
-    payment_method: Optional[str] = None
-    payment_details: Optional[str] = None
-    notes: Optional[str] = None
-
-
-class ConsignerUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    location: Optional[str] = None
-    default_fee: Optional[Decimal] = None
-    payment_method: Optional[str] = None
-    payment_details: Optional[str] = None
-    is_active: Optional[bool] = None
-    notes: Optional[str] = None
-
-
-class ConsignerResponse(BaseModel):
-    id: UUID
-    name: str
-    email: Optional[str]
-    phone: Optional[str]
-    location: Optional[str]
-    default_fee: Optional[Decimal]
-    payment_method: Optional[str]
-    is_active: bool
-    
-    class Config:
-        from_attributes = True
-
-
-class ConsignerStats(BaseModel):
-    total_consignments: int
-    total_cards_sent: int
-    cards_signed: int
-    cards_refused: int
-    cards_pending: int
-    total_fees_paid: Decimal
-    success_rate: float
 
 
 class ConsignmentItemCreate(BaseModel):

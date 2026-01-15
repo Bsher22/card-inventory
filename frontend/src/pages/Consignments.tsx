@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Plus, Package, Calendar, 
-  ChevronDown, ChevronRight, X, Check, AlertCircle, Trash2, Search
+import {
+  Plus, Package, Calendar,
+  ChevronDown, ChevronRight, X, Check, AlertCircle, Trash2, Search,
+  Grid3X3, Send
 } from 'lucide-react';
 import { api } from '../api';
-import type { 
-  Consignment, 
-  ConsignmentCreate, 
+import type {
+  Consignment,
+  ConsignmentCreate,
   ConsignmentItemCreate,
   Consigner,
-  Checklist 
+  Checklist
 } from '../types';
+import PricingMatrix from './PricingMatrix';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -645,7 +647,10 @@ function ConsignmentCard({
 // MAIN PAGE
 // ============================================
 
+type TabType = 'consignments' | 'pricing';
+
 export default function Consignments() {
+  const [activeTab, setActiveTab] = useState<TabType>('consignments');
   const [filterConsigner, setFilterConsigner] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -670,19 +675,55 @@ export default function Consignments() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Consignments</h1>
-          <p className="text-gray-500 mt-1">Track cards sent out for autographs</p>
+          <p className="text-gray-500 mt-1">Track cards sent out for autographs and compare consigner pricing</p>
         </div>
+        {activeTab === 'consignments' && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            New Consignment
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-6 border-b border-gray-200">
         <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => setActiveTab('consignments')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'consignments'
+              ? 'text-blue-600 border-blue-600'
+              : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
+          }`}
         >
-          <Plus size={18} />
-          New Consignment
+          <Send size={18} />
+          Consignments
+        </button>
+        <button
+          onClick={() => setActiveTab('pricing')}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'pricing'
+              ? 'text-blue-600 border-blue-600'
+              : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          <Grid3X3 size={18} />
+          Pricing Matrix
         </button>
       </div>
+
+      {/* Tab Content */}
+      {activeTab === 'pricing' ? (
+        <PricingMatrix embedded />
+      ) : (
+        <>
+          {/* Summary Stats */}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -770,13 +811,15 @@ export default function Consignments() {
         </div>
       )}
 
-      {/* Create Modal */}
-      <NewConsignmentModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {}}
-        consigners={consigners}
-      />
+          {/* Create Modal */}
+          <NewConsignmentModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={() => {}}
+            consigners={consigners}
+          />
+        </>
+      )}
     </div>
   );
 }

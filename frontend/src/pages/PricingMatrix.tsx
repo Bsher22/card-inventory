@@ -3,9 +3,10 @@
  *
  * Displays a grid of players (rows) vs consigners (columns) with prices.
  * Allows inline editing of prices.
+ * Players are added manually via "Add Player" button.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -18,12 +19,17 @@ import {
   TrendingDown,
   TrendingUp,
   Minus,
+  Plus,
+  Trash2,
+  Users,
 } from 'lucide-react';
 import { consignerPricingApi } from '../api/consignerPricingApi';
+import { playersApi } from '../api/playersApi';
 import type {
   PlayerRow,
   ConsignerPlayerPriceCreate,
 } from '../types/consignerPricing';
+import type { Player } from '../types/players';
 
 function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return '-';
@@ -41,13 +47,22 @@ interface EditingCell {
   value: string;
 }
 
-export default function PricingMatrix() {
+interface PricingMatrixProps {
+  embedded?: boolean;
+}
+
+export default function PricingMatrix({ embedded = false }: PricingMatrixProps) {
   const queryClient = useQueryClient();
+
+  // State for manually selected players
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'selected' | 'all'>('selected');
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [onlyWithPrices, setOnlyWithPrices] = useState(false);
   const [page, setPage] = useState(0);
   const pageSize = 50;
 
@@ -64,17 +79,35 @@ export default function PricingMatrix() {
     return () => clearTimeout(timeout);
   }, []);
 
-  // Fetch matrix data
+  // Fetch matrix data - only with prices when in "selected" mode
   const { data: matrix, isLoading, error } = useQuery({
-    queryKey: ['pricing-matrix', debouncedSearch, onlyWithPrices, page],
+    queryKey: ['pricing-matrix', debouncedSearch, viewMode === 'all', page, selectedPlayerIds],
     queryFn: () =>
       consignerPricingApi.getMatrix({
         player_search: debouncedSearch || undefined,
-        only_with_prices: onlyWithPrices,
+        only_with_prices: viewMode === 'selected' ? true : false,
         limit: pageSize,
         offset: page * pageSize,
       }),
   });
+
+  // Fetch all players for the add modal
+  const { data: allPlayers } = useQuery({
+    queryKey: ['players-for-matrix', playerSearchTerm],
+    queryFn: () => playersApi.getPlayers({ search: playerSearchTerm, limit: 50 }),
+    enabled: showAddPlayerModal,
+  });
+
+  // Filter players in modal to exclude already selected
+  const availablePlayers = useMemo(() => {
+    if (!allPlayers?.players) return [];
+    const existingIds = new Set(selectedPlayerIds);
+    // Also exclude players already in matrix
+    if (matrix?.players) {
+      matrix.players.forEach(p => existingIds.add(p.id));
+    }
+    return allPlayers.players.filter(p => !existingIds.has(p.id));
+  }, [allPlayers, selectedPlayerIds, matrix]);
 
   // Create/update price mutation
   const createPriceMutation = useMutation({
@@ -157,6 +190,18 @@ export default function PricingMatrix() {
     return best;
   };
 
+  // Add player to matrix
+  const handleAddPlayer = (player: Player) => {
+    setSelectedPlayerIds(prev => [...prev, player.id]);
+    setShowAddPlayerModal(false);
+    setPlayerSearchTerm('');
+  };
+
+  // Remove player from selection (only in selected view)
+  const handleRemovePlayer = (playerId: string) => {
+    setSelectedPlayerIds(prev => prev.filter(id => id !== playerId));
+  };
+
   // Export to CSV
   const handleExport = () => {
     if (!matrix) return;
@@ -184,7 +229,7 @@ export default function PricingMatrix() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className={embedded ? '' : 'p-8'}>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
           Error loading pricing matrix: {(error as Error).message}
         </div>
@@ -193,23 +238,36 @@ export default function PricingMatrix() {
   }
 
   return (
-    <div className="p-8">
+    <div className={embedded ? '' : 'p-8'}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pricing Matrix</h1>
-          <p className="text-gray-500 mt-1">
-            Compare consigner prices across players - Click any cell to edit
-          </p>
+          {!embedded && (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900">Pricing Matrix</h1>
+              <p className="text-gray-500 mt-1">
+                Compare consigner prices across players - Click any cell to edit
+              </p>
+            </>
+          )}
         </div>
-        <button
-          onClick={handleExport}
-          disabled={!matrix}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-        >
-          <Download size={18} />
-          Export CSV
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddPlayerModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            Add Player
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={!matrix}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+          >
+            <Download size={18} />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -225,29 +283,40 @@ export default function PricingMatrix() {
           />
         </div>
 
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={onlyWithPrices}
-            onChange={(e) => {
-              setOnlyWithPrices(e.target.checked);
-              setPage(0);
-            }}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm text-gray-600">Only show players with prices</span>
-        </label>
+        {/* View Mode Toggle */}
+        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => { setViewMode('selected'); setPage(0); }}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              viewMode === 'selected'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            With Prices
+          </button>
+          <button
+            onClick={() => { setViewMode('all'); setPage(0); }}
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              viewMode === 'all'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            All Players
+          </button>
+        </div>
 
         {matrix && (
           <div className="text-sm text-gray-500">
-            {matrix.total_players} players - {matrix.total_consigners} consigners
+            {matrix.total_players} players • {matrix.total_consigners} consigners
           </div>
         )}
       </div>
 
       {/* Matrix Table */}
       {isLoading ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-8">
+        <div className="bg-white rounded-xl border-2 border-gray-300 p-8">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-gray-200 rounded w-full"></div>
             {[...Array(10)].map((_, i) => (
@@ -256,18 +325,20 @@ export default function PricingMatrix() {
           </div>
         </div>
       ) : matrix && matrix.consigners.length > 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl border-2 border-gray-300 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px] z-10">
+                <tr className="bg-gray-100">
+                  <th className="sticky left-0 bg-gray-100 px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px] z-10 border-b-2 border-r-2 border-gray-400">
                     Player
                   </th>
-                  {matrix.consigners.map((consigner) => (
+                  {matrix.consigners.map((consigner, idx) => (
                     <th
                       key={consigner.id}
-                      className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]"
+                      className={`px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[130px] border-b-2 border-gray-400 ${
+                        idx < matrix.consigners.length - 1 ? 'border-r-2 border-gray-300' : ''
+                      }`}
                     >
                       <div>{consigner.name}</div>
                       {consigner.default_fee && (
@@ -277,25 +348,31 @@ export default function PricingMatrix() {
                       )}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[100px]">
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[100px] border-b-2 border-l-2 border-gray-400 bg-green-50">
                     Best
                   </th>
+                  {viewMode === 'selected' && (
+                    <th className="px-2 py-3 text-center text-sm font-semibold text-gray-900 w-10 border-b-2 border-l-2 border-gray-400">
+
+                    </th>
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {matrix.players.map((player) => {
+              <tbody>
+                {matrix.players.map((player, rowIdx) => {
                   const bestPrice = getBestPrice(player);
+                  const isEvenRow = rowIdx % 2 === 0;
 
                   return (
-                    <tr key={player.id} className="hover:bg-gray-50">
-                      <td className="sticky left-0 bg-white hover:bg-gray-50 px-4 py-3 text-sm font-medium text-gray-900 z-10">
+                    <tr key={player.id} className={isEvenRow ? 'bg-white' : 'bg-gray-50'}>
+                      <td className={`sticky left-0 ${isEvenRow ? 'bg-white' : 'bg-gray-50'} px-4 py-3 text-sm font-medium text-gray-900 z-10 border-b border-r-2 border-gray-400`}>
                         <div>{player.name}</div>
                         {player.team && (
                           <div className="text-xs text-gray-500">{player.team}</div>
                         )}
                       </td>
 
-                      {matrix.consigners.map((consigner) => {
+                      {matrix.consigners.map((consigner, colIdx) => {
                         const priceInfo = player.prices[consigner.id];
                         const isEditing =
                           editingCell?.playerId === player.id &&
@@ -307,9 +384,9 @@ export default function PricingMatrix() {
                         return (
                           <td
                             key={consigner.id}
-                            className={`px-4 py-3 text-center text-sm ${
-                              isBest ? 'bg-green-50' : ''
-                            }`}
+                            className={`px-4 py-3 text-center text-sm border-b border-gray-200 ${
+                              colIdx < matrix.consigners.length - 1 ? 'border-r-2 border-gray-300' : ''
+                            } ${isBest ? 'bg-green-50' : ''}`}
                           >
                             {isEditing ? (
                               <div className="flex items-center gap-1 justify-center">
@@ -373,7 +450,7 @@ export default function PricingMatrix() {
                       })}
 
                       {/* Best Price Column */}
-                      <td className="px-4 py-3 text-center text-sm">
+                      <td className="px-4 py-3 text-center text-sm border-b border-gray-200 border-l-2 border-gray-400 bg-green-50">
                         {bestPrice ? (
                           <div className="text-green-700 font-semibold">
                             {formatCurrency(bestPrice.price)}
@@ -382,6 +459,19 @@ export default function PricingMatrix() {
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
+
+                      {/* Remove Button (only in selected view) */}
+                      {viewMode === 'selected' && (
+                        <td className="px-2 py-3 text-center border-b border-gray-200 border-l-2 border-gray-400">
+                          <button
+                            onClick={() => handleRemovePlayer(player.id)}
+                            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Remove from matrix"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -389,16 +479,18 @@ export default function PricingMatrix() {
 
               {/* Summary Row */}
               <tfoot>
-                <tr className="bg-gray-50 border-t-2 border-gray-200">
-                  <td className="sticky left-0 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 z-10">
+                <tr className="bg-gray-100 border-t-2 border-gray-400">
+                  <td className="sticky left-0 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 z-10 border-r-2 border-gray-400">
                     Summary
                   </td>
-                  {matrix.consigners.map((consigner) => {
+                  {matrix.consigners.map((consigner, idx) => {
                     const stats = consignerStats[consigner.id];
                     return (
                       <td
                         key={consigner.id}
-                        className="px-4 py-2 text-center text-xs text-gray-600"
+                        className={`px-4 py-2 text-center text-xs text-gray-600 ${
+                          idx < matrix.consigners.length - 1 ? 'border-r-2 border-gray-300' : ''
+                        }`}
                       >
                         {stats && stats.count > 0 ? (
                           <div className="space-y-0.5">
@@ -424,7 +516,8 @@ export default function PricingMatrix() {
                       </td>
                     );
                   })}
-                  <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3 border-l-2 border-gray-400"></td>
+                  {viewMode === 'selected' && <td className="border-l-2 border-gray-400"></td>}
                 </tr>
               </tfoot>
             </table>
@@ -432,7 +525,7 @@ export default function PricingMatrix() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between px-4 py-3 border-t-2 border-gray-300">
               <div className="text-sm text-gray-600">
                 Showing {page * pageSize + 1} -{' '}
                 {Math.min((page + 1) * pageSize, matrix.total_players)} of{' '}
@@ -460,14 +553,27 @@ export default function PricingMatrix() {
             </div>
           )}
         </div>
+      ) : matrix && matrix.players.length === 0 ? (
+        <div className="bg-white rounded-xl border-2 border-gray-300 p-12 text-center">
+          <Users className="mx-auto text-gray-300 mb-4" size={48} />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Players in Matrix</h3>
+          <p className="text-gray-500 mb-6">
+            Click "Add Player" to start building your pricing comparison matrix.
+          </p>
+          <button
+            onClick={() => setShowAddPlayerModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            Add Player
+          </button>
+        </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+        <div className="bg-white rounded-xl border-2 border-gray-300 p-12 text-center">
           <DollarSign className="mx-auto text-gray-300 mb-4" size={48} />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Pricing Data</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Consigners</h3>
           <p className="text-gray-500">
-            {matrix?.total_consigners === 0
-              ? 'Add consigners first to start tracking prices.'
-              : 'No players match your search criteria.'}
+            Add consigners first to start tracking prices.
           </p>
         </div>
       )}
@@ -475,7 +581,7 @@ export default function PricingMatrix() {
       {/* Legend */}
       <div className="mt-4 flex items-center gap-6 text-sm text-gray-500">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
+          <div className="w-4 h-4 bg-green-50 border-2 border-green-300 rounded"></div>
           <span>Best price for player</span>
         </div>
         <div className="flex items-center gap-2">
@@ -483,6 +589,67 @@ export default function PricingMatrix() {
           <span>No price set (click to add)</span>
         </div>
       </div>
+
+      {/* Add Player Modal */}
+      {showAddPlayerModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Add Player to Matrix</h3>
+              <button
+                onClick={() => {
+                  setShowAddPlayerModal(false);
+                  setPlayerSearchTerm('');
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  value={playerSearchTerm}
+                  onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                  placeholder="Search players..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoFocus
+                />
+              </div>
+
+              <div className="max-h-64 overflow-y-auto">
+                {availablePlayers.length > 0 ? (
+                  <div className="space-y-1">
+                    {availablePlayers.map((player) => (
+                      <button
+                        key={player.id}
+                        onClick={() => handleAddPlayer(player)}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="font-medium text-gray-900">{player.name}</div>
+                        {player.team && (
+                          <div className="text-sm text-gray-500">{player.team}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : playerSearchTerm ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No players found matching "{playerSearchTerm}"
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Type to search for players
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
