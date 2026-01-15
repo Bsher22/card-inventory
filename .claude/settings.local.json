@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(unzip:*)",
-      "Bash(PGPASSWORD=oktBbEQIwszLZbDMwdaqwSxgyzQzolfD psql:*)"
+      "Bash(PGPASSWORD=oktBbEQIwszLZbDMwdaqwSxgyzQzolfD psql:*)",
+      "Bash(copy \"C:\\\\Users\\\\Brian\\\\Desktop\\\\IDGAS\\\\bulk_inventory_import.py\" \"C:\\\\Users\\\\Brian\\\\Desktop\\\\IDGAS\\\\backend\\\\app\\\\services\\\\bulk_inventory_import.py\")",
+      "Bash(copy:*)",
+      "Bash(python run_bulk_import.py:*)",
+      "Bash(python preview_import.py:*)",
+      "Bash(curl:*)",
+      "Bash(python run_import_direct.py:*)",
+      "Bash(git reset:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

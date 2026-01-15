@@ -100,13 +100,13 @@ export default function PricingMatrix({ embedded = false }: PricingMatrixProps) 
 
   // Filter players in modal to exclude already selected
   const availablePlayers = useMemo(() => {
-    if (!allPlayers?.players) return [];
+    if (!allPlayers || allPlayers.length === 0) return [];
     const existingIds = new Set(selectedPlayerIds);
     // Also exclude players already in matrix
     if (matrix?.players) {
       matrix.players.forEach(p => existingIds.add(p.id));
     }
-    return allPlayers.players.filter(p => !existingIds.has(p.id));
+    return allPlayers.filter((p: Player) => !existingIds.has(p.id));
   }, [allPlayers, selectedPlayerIds, matrix]);
 
   // Create/update price mutation
