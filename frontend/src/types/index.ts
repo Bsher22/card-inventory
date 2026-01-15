@@ -52,3 +52,5 @@ export * from './ebay';
 export * from './grading';
 
 export * from './submitter';
+// Consigner Pricing
+export * from './consignerPricing';

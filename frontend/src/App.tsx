@@ -16,6 +16,7 @@ import {
   Trophy,
   ShieldCheck,
   Building2,
+  Grid3X3,
 } from 'lucide-react';
 
 // Auth
@@ -39,6 +40,7 @@ import AuthenticationPage from './pages/AuthenticationPage';
 import EbayImport from './pages/EbayImport';
 import StandaloneItems from './pages/StandaloneItems';
 import Submitters from './pages/Submitters';
+import PricingMatrix from './pages/PricingMatrix';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,6 +60,7 @@ const navItems = [
   { to: '/memorabilia', icon: Trophy, label: 'Memorabilia' },
   { to: '/consigners', icon: Users, label: 'Consigners' },
   { to: '/consignments', icon: Send, label: 'Consignments' },
+  { to: '/pricing-matrix', icon: Grid3X3, label: 'Pricing Matrix' },
   { to: '/grading', icon: Award, label: 'Card Grading' },
   { to: '/authentication', icon: ShieldCheck, label: 'Authentication' },
   { to: '/submitters', icon: Building2, label: 'Submitters' },
@@ -196,6 +199,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Consignments />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pricing-matrix"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <PricingMatrix />
                   </AppLayout>
                 </ProtectedRoute>
               }

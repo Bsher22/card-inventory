@@ -26,15 +26,12 @@ from app.routes import (
 from app.routes.card_grading import router as card_grading_router
 from app.routes.signature_auth import router as signature_auth_router
 
-# Submitters route
-from app.routes.submitters import router as submitters_router
-
 # eBay routes - two separate routers for different functionality
 from app.routes.ebay_routes import router as ebay_import_router  # Sales import
 from app.routes.ebay import router as ebay_listing_router  # Listing generation
 
-# Consigner Player Pricing
-from app.routes.consigner_player_price import router as consigner_pricing_router
+# Bulk Import
+from app.routes.bulk_import import router as bulk_import_router
 
 settings = get_settings()
 
@@ -77,10 +74,6 @@ app.include_router(inventory_router, prefix="/api", tags=["Inventory"])
 app.include_router(standalone_items_router, prefix="/api", tags=["Standalone Items"])
 app.include_router(financial_router, prefix="/api", tags=["Purchases & Sales"])
 app.include_router(consignments_router, prefix="/api", tags=["Consignments"])
-app.include_router(consigner_pricing_router, prefix="/api", tags=["Consigner Pricing"])
-
-# Submitters router (third-party grading/auth services)
-app.include_router(submitters_router, prefix="/api", tags=["Submitters"])
 
 # Grading & Authentication routers
 app.include_router(card_grading_router, prefix="/api", tags=["Card Grading (PSA/BGS/SGC)"])
@@ -92,6 +85,7 @@ app.include_router(ebay_listing_router, prefix="/api", tags=["eBay Listing Gener
 
 app.include_router(beckett_router)  # Beckett Import (has own /api/beckett prefix)
 app.include_router(card_types_router)  # Card Types, Parallels & PDF Parsing
+app.include_router(bulk_import_router, prefix="/api", tags=["Bulk Import"])
 
 
 @app.get("/")

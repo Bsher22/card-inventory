@@ -14,6 +14,7 @@ from sqlalchemy.sql import func
 from .base import Base
 
 if TYPE_CHECKING:
+    from .consigner_player_price import ConsignerPlayerPrice
     from .checklists import Checklist
 
 
@@ -35,3 +36,4 @@ class Player(Base):
 
     # Relationships
     checklists: Mapped[list["Checklist"]] = relationship(back_populates="player")
+    consigner_prices: Mapped[list["ConsignerPlayerPrice"]] = relationship(back_populates="player")

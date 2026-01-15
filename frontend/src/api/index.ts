@@ -55,6 +55,10 @@ export { cardTypesApi } from './cardTypesApi';
 export * from './ebayApi';
 export { ebayApi } from './ebayApi';
 
+// Consigner Pricing API
+export * from './consignerPricingApi';
+export { consignerPricingApi } from './consignerPricingApi';
+
 // ============================================
 // UNIFIED API OBJECT (Optional)
 // ============================================
@@ -70,10 +74,11 @@ import { financialApi } from './financialApi';
 import { beckettApi } from './beckettApi';
 import { cardTypesApi } from './cardTypesApi';
 import { ebayApi } from './ebayApi';
+import { consignerPricingApi } from './consignerPricingApi';
 
 /**
  * Unified API client with all domain APIs
- * 
+ *
  * Usage:
  *   import { api } from '@/api';
  *   const brands = await api.products.getBrands();
@@ -91,6 +96,7 @@ export const api = {
   beckett: beckettApi,
   cardTypes: cardTypesApi,
   ebay: ebayApi,
+  consignerPricing: consignerPricingApi,
 };
 
 export default api;

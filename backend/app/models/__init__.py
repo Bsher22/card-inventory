@@ -102,3 +102,5 @@ __all__ = [
     # Authentication
     "User",
 ]
+# Consigner Player Pricing
+from .consigner_player_price import ConsignerPlayerPrice

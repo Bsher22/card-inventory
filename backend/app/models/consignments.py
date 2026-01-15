@@ -16,6 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 if TYPE_CHECKING:
+    from .consigner_player_price import ConsignerPlayerPrice
     from .checklists import Checklist
     from .inventory import Inventory
 
@@ -60,6 +61,7 @@ class Consigner(Base):
     
     # Relationships
     consignments: Mapped[list["Consignment"]] = relationship(back_populates="consigner")
+    player_prices: Mapped[list["ConsignerPlayerPrice"]] = relationship(back_populates="consigner")
     
     @property
     def formatted_address(self) -> Optional[str]:
