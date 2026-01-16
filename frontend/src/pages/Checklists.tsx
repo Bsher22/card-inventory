@@ -127,7 +127,7 @@ export default function Checklists() {
                     </div>
                     {card.product_line && (
                       <div className="text-xs text-gray-500">
-                        {card.product_line.year} {card.product_line.name}
+                        {card.product_line.name}
                       </div>
                     )}
                   </td>
