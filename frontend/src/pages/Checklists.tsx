@@ -58,9 +58,9 @@ export default function Checklists() {
     return uniqueYears.sort((a, b) => b - a); // Descending
   }, [productLines]);
 
-  const teams = useMemo(() => {
+  const teams = useMemo<string[]>(() => {
     if (!checklists) return [];
-    const uniqueTeams = [...new Set(checklists.map(c => c.team).filter(Boolean))];
+    const uniqueTeams = [...new Set(checklists.map(c => c.team).filter((t): t is string => t !== null && t !== undefined))];
     return uniqueTeams.sort();
   }, [checklists]);
 
