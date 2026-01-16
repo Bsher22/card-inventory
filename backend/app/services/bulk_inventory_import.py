@@ -236,16 +236,17 @@ def map_card_type(type_str: str) -> Tuple[Optional[str], Optional[str], bool]:
 def get_product_line_name(year: int, base_type: str) -> str:
     """
     Determine product line name based on year and base type.
+    Includes year prefix to match checklist upload naming convention.
     """
-    # Map base types to product line names
+    # Map base types to product line names (with year prefix)
     if base_type == "Sapphire":
-        return f"Bowman Sapphire"
+        return f"{year} Bowman Sapphire"
     elif base_type == "Mega":
-        return f"Bowman Mega Box"
+        return f"{year} Bowman Mega Box"
     elif base_type == "Paper":
-        return f"Bowman"
+        return f"{year} Bowman"
     else:  # Chrome and others
-        return f"Bowman Chrome"
+        return f"{year} Bowman Chrome"
 
 
 class BulkInventoryImporter:

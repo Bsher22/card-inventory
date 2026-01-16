@@ -225,19 +225,30 @@ class ChecklistParser:
         if filename.endswith('.csv'):
             df = pd.read_csv(BytesIO(file_content))
         elif filename.endswith(('.xlsx', '.xls')):
-            # Try to use "Master" sheet if it exists, otherwise first sheet
+            # Try to use "Master", "Full Checklist", or "Teams" sheet if it exists, otherwise first sheet
             xl = pd.ExcelFile(BytesIO(file_content))
-            if 'Master' in xl.sheet_names:
+            master_sheet = None
+            for sheet_name in ['Master', 'Full Checklist', 'Teams']:
+                if sheet_name in xl.sheet_names:
+                    master_sheet = sheet_name
+                    break
+
+            if master_sheet:
                 # Beckett Master sheets have data starting from row 1 with no header
-                # Columns are: Set, Card#, Player, Team, Notes
-                df = pd.read_excel(xl, sheet_name='Master', header=None)
-                # Assign proper column names
-                if len(df.columns) >= 5:
-                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes'][:len(df.columns)]
-                elif len(df.columns) == 4:
+                # Columns are: Set, Card#, Player, Team, Notes (and sometimes extra columns)
+                df = pd.read_excel(xl, sheet_name=master_sheet, header=None)
+                # Assign proper column names based on column count
+                num_cols = len(df.columns)
+                if num_cols >= 6:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes', 'extra'][:num_cols]
+                elif num_cols == 5:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes']
+                elif num_cols == 4:
                     df.columns = ['set_name', 'card_number', 'player_name', 'team']
+                elif num_cols == 3:
+                    df.columns = ['card_number', 'player_name', 'team']
                 else:
-                    df.columns = [f'col_{i}' for i in range(len(df.columns))]
+                    df.columns = [f'col_{i}' for i in range(num_cols)]
             else:
                 df = pd.read_excel(xl, sheet_name=0)
         else:
@@ -291,19 +302,30 @@ class ChecklistParser:
         if filename.endswith('.csv'):
             df = pd.read_csv(BytesIO(file_content))
         elif filename.endswith(('.xlsx', '.xls')):
-            # Try to use "Master" sheet if it exists, otherwise first sheet
+            # Try to use "Master", "Full Checklist", or "Teams" sheet if it exists, otherwise first sheet
             xl = pd.ExcelFile(BytesIO(file_content))
-            if 'Master' in xl.sheet_names:
+            master_sheet = None
+            for sheet_name in ['Master', 'Full Checklist', 'Teams']:
+                if sheet_name in xl.sheet_names:
+                    master_sheet = sheet_name
+                    break
+
+            if master_sheet:
                 # Beckett Master sheets have data starting from row 1 with no header
-                # Columns are: Set, Card#, Player, Team, Notes
-                df = pd.read_excel(xl, sheet_name='Master', header=None)
-                # Assign proper column names
-                if len(df.columns) >= 5:
-                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes'][:len(df.columns)]
-                elif len(df.columns) == 4:
+                # Columns are: Set, Card#, Player, Team, Notes (and sometimes extra columns)
+                df = pd.read_excel(xl, sheet_name=master_sheet, header=None)
+                # Assign proper column names based on column count
+                num_cols = len(df.columns)
+                if num_cols >= 6:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes', 'extra'][:num_cols]
+                elif num_cols == 5:
+                    df.columns = ['set_name', 'card_number', 'player_name', 'team', 'notes']
+                elif num_cols == 4:
                     df.columns = ['set_name', 'card_number', 'player_name', 'team']
+                elif num_cols == 3:
+                    df.columns = ['card_number', 'player_name', 'team']
                 else:
-                    df.columns = [f'col_{i}' for i in range(len(df.columns))]
+                    df.columns = [f'col_{i}' for i in range(num_cols)]
             else:
                 df = pd.read_excel(xl, sheet_name=0)
         else:

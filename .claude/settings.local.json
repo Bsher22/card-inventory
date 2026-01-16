@@ -12,7 +12,12 @@
       "Bash(git reset:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run build:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(psql:*)",
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(PGPASSWORD=cardpass psql:*)",
+      "Bash(docker ps:*)",
+      "Bash(PGPASSWORD='UffSXchPxIvLSmLccNYnKsvkAqVdLGjT' psql -h ballast.proxy.rlwy.net -p 40270 -U postgres -d railway -c \"SELECT COUNT\\(*\\) as total_first_bowman, COUNT\\(DISTINCT player_id\\) as unique_players FROM checklists WHERE is_first_bowman = true;\")"
     ]
   }
 }
