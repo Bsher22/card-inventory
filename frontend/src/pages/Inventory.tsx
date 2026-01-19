@@ -103,9 +103,9 @@ export default function Inventory() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
           <p className="text-gray-500 mt-1">
@@ -170,7 +170,7 @@ export default function Inventory() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div className="flex flex-wrap gap-3 mb-4">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
@@ -267,23 +267,23 @@ export default function Inventory() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 {ebayMode && (
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-1.5 text-left">
                     <button onClick={selectAll} className="text-gray-400 hover:text-gray-600">
                       {selectedIds.size === filteredInventory.length && filteredInventory.length > 0 ? (
-                        <CheckSquare size={18} />
+                        <CheckSquare size={16} />
                       ) : (
-                        <Square size={18} />
+                        <Square size={16} />
                       )}
                     </button>
                   </th>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Player</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Card</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Parallel</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Qty</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Total Cost</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">Per Unit</th>
+                <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-600">Player</th>
+                <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-600">Card</th>
+                <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-600">Parallel</th>
+                <th className="px-3 py-1.5 text-center text-xs font-medium text-gray-600">Qty</th>
+                <th className="px-3 py-1.5 text-center text-xs font-medium text-gray-600">Status</th>
+                <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-600">Total Cost</th>
+                <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-600">Per Unit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -297,7 +297,7 @@ export default function Inventory() {
                   style={ebayMode ? { cursor: 'pointer' } : undefined}
                 >
                   {ebayMode && (
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-1.5">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -306,35 +306,35 @@ export default function Inventory() {
                         className="text-orange-500"
                       >
                         {selectedIds.has(item.id) ? (
-                          <CheckSquare size={18} />
+                          <CheckSquare size={16} />
                         ) : (
-                          <Square size={18} />
+                          <Square size={16} />
                         )}
                       </button>
                     </td>
                   )}
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">
+                  <td className="px-3 py-1.5">
+                    <div className="text-sm font-medium text-gray-900">
                       {item.checklist?.player?.name || item.checklist?.player_name_raw || 'Unknown'}
                     </div>
                     <div className="text-xs text-gray-500">
                       {item.checklist?.team || '-'}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <div className="text-sm text-gray-900">
-                      {item.checklist?.product_line?.year} {item.checklist?.product_line?.name}
+                      {item.checklist?.product_line?.name}
                     </div>
                     <div className="text-xs text-gray-500">
                       #{item.checklist?.card_number}
                       {item.checklist?.is_first_bowman && (
-                        <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px]">
+                        <span className="ml-1.5 px-1 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px]">
                           1st
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <div className="text-sm text-gray-700">
                       {item.base_type?.name || 'Chrome'}
                     </div>
@@ -345,31 +345,31 @@ export default function Inventory() {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-medium text-gray-900">{item.quantity}</span>
+                  <td className="px-3 py-1.5 text-center">
+                    <span className="text-sm font-medium text-gray-900">{item.quantity}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <div className="flex justify-center gap-1">
                       {item.is_signed && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                        <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
                           Signed
                         </span>
                       )}
                       {item.is_slabbed ? (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
                           {item.grade_company} {item.grade_value}
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                        <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
                           Raw
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-medium text-gray-900">
+                  <td className="px-3 py-1.5 text-right text-sm font-medium text-gray-900">
                     {formatCurrency(item.total_cost)}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-600">
+                  <td className="px-3 py-1.5 text-right text-sm text-gray-600">
                     {formatCurrency(
                       item.total_cost && item.quantity
                         ? item.total_cost / item.quantity
