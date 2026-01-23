@@ -22,7 +22,12 @@ export interface Inventory {
   raw_condition: string;
   storage_location: string | null;
   notes: string | null;
+  card_cost: number;
+  signing_cost: number;
+  grading_cost: number;
   total_cost: number;
+  consigner: string | null;
+  how_obtained: string | null;
   created_at: string;
   updated_at: string;
   checklist?: Checklist;
@@ -45,7 +50,12 @@ export interface InventoryCreate {
   raw_condition?: string;
   storage_location?: string | null;
   notes?: string | null;
+  card_cost?: number;
+  signing_cost?: number;
+  grading_cost?: number;
   total_cost?: number;
+  consigner?: string | null;
+  how_obtained?: string | null;
 }
 
 export interface InventoryUpdate {
@@ -62,7 +72,12 @@ export interface InventoryUpdate {
   raw_condition?: string;
   storage_location?: string | null;
   notes?: string | null;
+  card_cost?: number;
+  signing_cost?: number;
+  grading_cost?: number;
   total_cost?: number;
+  consigner?: string | null;
+  how_obtained?: string | null;
 }
 
 export interface InventoryWithCard extends Inventory {
@@ -101,6 +116,21 @@ export interface InventorySummary {
   signed_count: number;
   slabbed_count: number;
   raw_count: number;
+}
+
+export interface PlayerInventoryGroup {
+  player_name: string;
+  total_quantity: number;
+  total_cost: number;
+  unsigned: InventoryWithCard[];
+  signed: InventoryWithCard[];
+  slabbed: InventoryWithCard[];
+  unsigned_qty: number;
+  signed_qty: number;
+  slabbed_qty: number;
+  card_cost: number;
+  signing_cost: number;
+  grading_cost: number;
 }
 
 export interface InventoryAnalytics {

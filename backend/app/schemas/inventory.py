@@ -25,7 +25,12 @@ class InventoryBase(BaseModel):
     raw_condition: str = Field(default="NM", max_length=20)
     storage_location: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
+    card_cost: Decimal = Field(default=0, ge=0)
+    signing_cost: Decimal = Field(default=0, ge=0)
+    grading_cost: Decimal = Field(default=0, ge=0)
     total_cost: Decimal = Field(default=0, ge=0)
+    consigner: Optional[str] = Field(None, max_length=100)
+    how_obtained: Optional[str] = Field(None, max_length=50)
 
 
 class InventoryCreate(InventoryBase):
@@ -49,7 +54,12 @@ class InventoryUpdate(BaseModel):
     raw_condition: Optional[str] = Field(None, max_length=20)
     storage_location: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
+    card_cost: Optional[Decimal] = Field(None, ge=0)
+    signing_cost: Optional[Decimal] = Field(None, ge=0)
+    grading_cost: Optional[Decimal] = Field(None, ge=0)
     total_cost: Optional[Decimal] = Field(None, ge=0)
+    consigner: Optional[str] = Field(None, max_length=100)
+    how_obtained: Optional[str] = Field(None, max_length=50)
 
 
 class InventoryResponse(BaseSchema):
@@ -68,7 +78,12 @@ class InventoryResponse(BaseSchema):
     raw_condition: str
     storage_location: Optional[str] = None
     notes: Optional[str] = None
+    card_cost: Decimal = 0
+    signing_cost: Decimal = 0
+    grading_cost: Decimal = 0
     total_cost: Decimal
+    consigner: Optional[str] = None
+    how_obtained: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     checklist: Optional[ChecklistResponse] = None

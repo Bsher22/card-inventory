@@ -19,9 +19,12 @@ import {
   CheckSquare,
   Square,
   ExternalLink,
+  List,
+  Users,
 } from 'lucide-react';
 import { api } from '../api';
-import type { InventoryWithCard } from '../types';
+import type { InventoryWithCard, PlayerInventoryGroup } from '../types';
+import PlayerInventoryCard from '../components/PlayerInventoryCard';
 
 export default function Inventory() {
   const navigate = useNavigate();
@@ -33,6 +36,9 @@ export default function Inventory() {
   const [filterSigned, setFilterSigned] = useState<boolean | undefined>(undefined);
   const [filterSlabbed, setFilterSlabbed] = useState<boolean | undefined>(undefined);
   
+  // View mode: 'table' or 'player'
+  const [viewMode, setViewMode] = useState<'table' | 'player'>('table');
+
   // eBay listing mode
   const [ebayMode, setEbayMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -68,6 +74,54 @@ export default function Inventory() {
       return true;
     });
   }, [inventory, filterSigned, filterSlabbed]);
+
+  // Group inventory by player for player view
+  const playerGroups = useMemo<PlayerInventoryGroup[]>(() => {
+    if (viewMode !== 'player' || !filteredInventory.length) return [];
+
+    const grouped = new Map<string, PlayerInventoryGroup>();
+
+    for (const item of filteredInventory) {
+      const playerName = item.checklist?.player?.name || item.checklist?.player_name_raw || 'Unknown';
+
+      if (!grouped.has(playerName)) {
+        grouped.set(playerName, {
+          player_name: playerName,
+          total_quantity: 0,
+          total_cost: 0,
+          unsigned: [],
+          signed: [],
+          slabbed: [],
+          unsigned_qty: 0,
+          signed_qty: 0,
+          slabbed_qty: 0,
+          card_cost: 0,
+          signing_cost: 0,
+          grading_cost: 0,
+        });
+      }
+
+      const group = grouped.get(playerName)!;
+      group.total_quantity += item.quantity;
+      group.total_cost += item.total_cost || 0;
+      group.card_cost += item.card_cost || 0;
+      group.signing_cost += item.signing_cost || 0;
+      group.grading_cost += item.grading_cost || 0;
+
+      if (item.is_slabbed) {
+        group.slabbed.push(item);
+        group.slabbed_qty += item.quantity;
+      } else if (item.is_signed) {
+        group.signed.push(item);
+        group.signed_qty += item.quantity;
+      } else {
+        group.unsigned.push(item);
+        group.unsigned_qty += item.quantity;
+      }
+    }
+
+    return Array.from(grouped.values()).sort((a, b) => b.total_quantity - a.total_quantity);
+  }, [filteredInventory, viewMode]);
 
   // Selection handlers
   const toggleSelection = (id: string) => {
@@ -114,6 +168,32 @@ export default function Inventory() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-2 text-sm flex items-center gap-1.5 transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-blue-50 text-blue-700 font-medium'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <List size={16} />
+              Table
+            </button>
+            <button
+              onClick={() => setViewMode('player')}
+              className={`px-3 py-2 text-sm flex items-center gap-1.5 transition-colors border-l border-gray-200 ${
+                viewMode === 'player'
+                  ? 'bg-blue-50 text-blue-700 font-medium'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Users size={16} />
+              By Player
+            </button>
+          </div>
+
           {/* eBay Mode Toggle */}
           <button
             onClick={() => {
@@ -246,8 +326,31 @@ export default function Inventory() {
         </div>
       </div>
 
+      {/* Player View */}
+      {viewMode === 'player' && !isLoading && (
+        <div className="space-y-2">
+          {playerGroups.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+              <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-700 mb-2">No inventory found</h3>
+              <p className="text-gray-500">Try adjusting your filters or add some cards.</p>
+            </div>
+          ) : (
+            <>
+              <div className="text-sm text-gray-500 mb-2">
+                {playerGroups.length} player{playerGroups.length !== 1 ? 's' : ''} •{' '}
+                {filteredInventory.reduce((sum, i) => sum + i.quantity, 0).toLocaleString()} total cards
+              </div>
+              {playerGroups.map((group) => (
+                <PlayerInventoryCard key={group.player_name} group={group} />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Inventory Table */}
-      {isLoading ? (
+      {viewMode === 'table' && (isLoading ? (
         <div className="bg-white rounded-xl border border-gray-100 p-8">
           <div className="animate-pulse space-y-4">
             {[...Array(5)].map((_, i) => (
@@ -349,20 +452,25 @@ export default function Inventory() {
                     <span className="text-sm font-medium text-gray-900">{item.quantity}</span>
                   </td>
                   <td className="px-3 py-1.5">
-                    <div className="flex justify-center gap-1">
-                      {item.is_signed && (
-                        <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-                          Signed
-                        </span>
-                      )}
-                      {item.is_slabbed ? (
-                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                          {item.grade_company} {item.grade_value}
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                          Raw
-                        </span>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="flex gap-1">
+                        {item.is_signed && (
+                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                            Signed
+                          </span>
+                        )}
+                        {item.is_slabbed ? (
+                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                            {item.grade_company} {item.grade_value}
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            Raw
+                          </span>
+                        )}
+                      </div>
+                      {item.consigner && (
+                        <span className="text-[10px] text-gray-400">{item.consigner}</span>
                       )}
                     </div>
                   </td>
@@ -381,7 +489,7 @@ export default function Inventory() {
             </tbody>
           </table>
         </div>
-      )}
+      ))}
     </div>
   );
 }

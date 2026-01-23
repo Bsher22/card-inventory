@@ -86,8 +86,15 @@ class Inventory(Base):
     storage_location: Mapped[Optional[str]] = mapped_column(String(100))
     notes: Mapped[Optional[str]] = mapped_column(Text)
 
-    # Cost tracking - accumulates purchase + fees
+    # Granular cost tracking
+    card_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+    signing_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+    grading_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     total_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+
+    # Source tracking
+    consigner: Mapped[Optional[str]] = mapped_column(String(100))  # Who signed/sourced (IP, Desert Autographs, etc.)
+    how_obtained: Mapped[Optional[str]] = mapped_column(String(50))  # IP, TTM, Purchase, Signing, 50/50
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
