@@ -26,7 +26,7 @@ from .inventory import Inventory
 from .standalone_items import ItemCategory, StandaloneItem, Sport
 
 # Consignments
-from .consignments import Consigner, Consignment, ConsignmentItem
+from .consignments import Consigner, Consignment, ConsignmentItem, ConsignerHomeTeam
 
 # Grading & Authentication
 from .grading import (
@@ -79,6 +79,7 @@ __all__ = [
     "Consigner",
     "Consignment",
     "ConsignmentItem",
+    "ConsignerHomeTeam",
     # Grading & Authentication
     "GradingCompany",
     "GradingServiceLevel",

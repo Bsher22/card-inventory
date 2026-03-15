@@ -54,9 +54,18 @@ export interface ConsignerUpdate {
   notes?: string | null;
 }
 
+export interface ConsignerHomeTeam {
+  id: string;
+  team_id: number;
+  team_name: string;
+  team_abbreviation: string | null;
+  created_at: string;
+}
+
 export interface Consigner extends ConsignerBase {
   id: string;
   formatted_address?: string | null;
+  home_teams?: ConsignerHomeTeam[];
   created_at: string;
   updated_at: string;
 }

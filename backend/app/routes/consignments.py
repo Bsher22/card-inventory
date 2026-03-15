@@ -20,6 +20,8 @@ from app.schemas.consignments import (
     ConsignerUpdate,
     ConsignerResponse,
     ConsignerStats,
+    ConsignerHomeTeamCreate,
+    ConsignerHomeTeamResponse,
 )
 
 router = APIRouter()
@@ -167,6 +169,37 @@ async def update_consigner(
         raise HTTPException(status_code=404, detail="Consigner not found")
     
     return consigner
+
+
+# ============================================
+# CONSIGNER HOME TEAMS
+# ============================================
+
+@router.get("/consigners/{consigner_id}/home-teams", response_model=list[ConsignerHomeTeamResponse])
+async def get_consigner_home_teams(
+    consigner_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get home teams for a consigner."""
+    service = ConsignmentService(db)
+    return await service.get_consigner_home_teams(consigner_id)
+
+
+@router.put("/consigners/{consigner_id}/home-teams", response_model=list[ConsignerHomeTeamResponse])
+async def set_consigner_home_teams(
+    consigner_id: UUID,
+    teams: list[ConsignerHomeTeamCreate],
+    db: AsyncSession = Depends(get_db),
+):
+    """Set home teams for a consigner (replaces all existing)."""
+    service = ConsignmentService(db)
+    try:
+        return await service.set_consigner_home_teams(
+            consigner_id,
+            [t.model_dump() for t in teams],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 # ============================================

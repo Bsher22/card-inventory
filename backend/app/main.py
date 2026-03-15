@@ -39,6 +39,9 @@ from app.routes.consigner_player_price import router as consigner_pricing_router
 # Bulk Import
 from app.routes.bulk_import import router as bulk_import_router
 
+# MiLB Stats
+from app.routes.mlb_stats import router as mlb_stats_router
+
 settings = get_settings()
 
 
@@ -96,6 +99,7 @@ app.include_router(ebay_listing_router, prefix="/api", tags=["eBay Listing Gener
 app.include_router(beckett_router)  # Beckett Import (has own /api/beckett prefix)
 app.include_router(card_types_router)  # Card Types, Parallels & PDF Parsing
 app.include_router(bulk_import_router, prefix="/api", tags=["Bulk Import"])
+app.include_router(mlb_stats_router, prefix="/api", tags=["MiLB Stats"])
 
 
 @app.get("/")

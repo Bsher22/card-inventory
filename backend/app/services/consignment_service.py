@@ -18,9 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
-    Consigner, Consignment, ConsignmentItem, 
+    Consigner, Consignment, ConsignmentItem,
     Inventory, Checklist
 )
+from app.models.consignments import ConsignerHomeTeam
 
 
 class ConsignmentService:
@@ -38,11 +39,11 @@ class ConsignmentService:
         limit: int = 50,
     ) -> list[Consigner]:
         """Get all consigners."""
-        query = select(Consigner)
-        
+        query = select(Consigner).options(selectinload(Consigner.home_teams))
+
         if active_only:
             query = query.where(Consigner.is_active == True)
-        
+
         query = query.order_by(Consigner.name).offset(skip).limit(limit)
         result = await self.db.execute(query)
         return result.scalars().all()
@@ -51,7 +52,10 @@ class ConsignmentService:
         """Get a single consigner with their consignment history."""
         result = await self.db.execute(
             select(Consigner)
-            .options(selectinload(Consigner.consignments))
+            .options(
+                selectinload(Consigner.consignments),
+                selectinload(Consigner.home_teams),
+            )
             .where(Consigner.id == consigner_id)
         )
         return result.scalar_one_or_none()
@@ -101,6 +105,47 @@ class ConsignmentService:
         await self.db.refresh(consigner)
         return consigner
     
+    async def set_consigner_home_teams(
+        self,
+        consigner_id: UUID,
+        teams: list[dict],
+    ) -> list[ConsignerHomeTeam]:
+        """Replace all home teams for a consigner."""
+        consigner = await self.db.get(Consigner, consigner_id)
+        if not consigner:
+            raise ValueError(f"Consigner not found: {consigner_id}")
+
+        # Delete existing home teams
+        existing = await self.db.execute(
+            select(ConsignerHomeTeam).where(ConsignerHomeTeam.consigner_id == consigner_id)
+        )
+        for ht in existing.scalars().all():
+            await self.db.delete(ht)
+
+        # Create new home teams
+        new_teams = []
+        for team in teams:
+            ht = ConsignerHomeTeam(
+                consigner_id=consigner_id,
+                team_id=team["team_id"],
+                team_name=team["team_name"],
+                team_abbreviation=team.get("team_abbreviation"),
+            )
+            self.db.add(ht)
+            new_teams.append(ht)
+
+        await self.db.flush()
+        for ht in new_teams:
+            await self.db.refresh(ht)
+        return new_teams
+
+    async def get_consigner_home_teams(self, consigner_id: UUID) -> list[ConsignerHomeTeam]:
+        """Get home teams for a consigner."""
+        result = await self.db.execute(
+            select(ConsignerHomeTeam).where(ConsignerHomeTeam.consigner_id == consigner_id)
+        )
+        return result.scalars().all()
+
     async def get_consigner_stats(self, consigner_id: UUID) -> dict:
         """Get statistics for a consigner."""
         # Total consignments

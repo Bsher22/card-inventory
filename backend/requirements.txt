@@ -13,6 +13,7 @@ openpyxl==3.1.2  # For Excel file parsing
 python-dotenv==1.0.0
 rapidfuzz==3.6.1  # For fuzzy player name matching
 httpx==0.26.0
+cachetools==5.3.2
 PyMuPDF>=1.24.0
 python-jose[cryptography]==3.3.0
 passlib==1.7.4

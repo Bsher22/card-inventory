@@ -25,43 +25,58 @@ if TYPE_CHECKING:
 # CONSIGNMENT MODELS
 # ============================================
 
+class ConsignerHomeTeam(Base):
+    """MiLB team whose home games a consigner attends for autographs."""
+    __tablename__ = "consigner_home_teams"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    consigner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("consigners.id", ondelete="CASCADE"), nullable=False)
+    team_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    team_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    team_abbreviation: Mapped[Optional[str]] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    consigner: Mapped["Consigner"] = relationship(back_populates="home_teams")
+
+
 class Consigner(Base):
     """Represents a person/entity who signs cards on consignment."""
     __tablename__ = "consigners"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    
+
     # Contact info
     email: Mapped[Optional[str]] = mapped_column(String(200))
     phone: Mapped[Optional[str]] = mapped_column(String(50))
-    
+
     # Address fields (for shipping cards)
     street_address: Mapped[Optional[str]] = mapped_column(String(500))
     city: Mapped[Optional[str]] = mapped_column(String(100))
     state: Mapped[Optional[str]] = mapped_column(String(50))
     postal_code: Mapped[Optional[str]] = mapped_column(String(20))
     country: Mapped[Optional[str]] = mapped_column(String(100), default="USA")
-    
+
     # Legacy location field (can be used as label like "Home", "Office")
     location: Mapped[Optional[str]] = mapped_column(String(200))
-    
+
     # Payment and fee info
     default_fee: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2))
     payment_method: Mapped[Optional[str]] = mapped_column(String(100))
     payment_details: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     # Status and notes
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     notes: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
+
     # Relationships
     consignments: Mapped[list["Consignment"]] = relationship(back_populates="consigner")
     player_prices: Mapped[list["ConsignerPlayerPrice"]] = relationship(back_populates="consigner")
+    home_teams: Mapped[list["ConsignerHomeTeam"]] = relationship(back_populates="consigner", cascade="all, delete-orphan")
     
     @property
     def formatted_address(self) -> Optional[str]:

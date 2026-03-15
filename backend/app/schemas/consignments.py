@@ -12,6 +12,29 @@ from .checklists import ChecklistResponse
 
 
 # ============================================
+# CONSIGNER HOME TEAM SCHEMAS
+# ============================================
+
+class ConsignerHomeTeamCreate(BaseModel):
+    """Schema for adding a home team to a consigner."""
+    team_id: int
+    team_name: str = Field(..., max_length=200)
+    team_abbreviation: Optional[str] = Field(None, max_length=10)
+
+
+class ConsignerHomeTeamResponse(BaseModel):
+    """Schema for home team response."""
+    id: UUID
+    team_id: int
+    team_name: str
+    team_abbreviation: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================
 # CONSIGNER SCHEMAS
 # ============================================
 
@@ -73,7 +96,8 @@ class ConsignerResponse(ConsignerBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
-    
+    home_teams: list[ConsignerHomeTeamResponse] = []
+
     @computed_field
     @property
     def formatted_address(self) -> Optional[str]:

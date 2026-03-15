@@ -131,6 +131,38 @@ export async function markConsignmentFeePaid(id: string, feePaidDate?: string): 
 }
 
 // ============================================
+// CONSIGNER HOME TEAMS API
+// ============================================
+
+export interface ConsignerHomeTeamCreate {
+  team_id: number;
+  team_name: string;
+  team_abbreviation?: string;
+}
+
+export interface ConsignerHomeTeamResponse {
+  id: string;
+  team_id: number;
+  team_name: string;
+  team_abbreviation: string | null;
+  created_at: string;
+}
+
+export async function getConsignerHomeTeams(consignerId: string): Promise<ConsignerHomeTeamResponse[]> {
+  return apiRequest<ConsignerHomeTeamResponse[]>(`/consigners/${consignerId}/home-teams`);
+}
+
+export async function setConsignerHomeTeams(
+  consignerId: string,
+  teams: ConsignerHomeTeamCreate[],
+): Promise<ConsignerHomeTeamResponse[]> {
+  return apiRequest<ConsignerHomeTeamResponse[]>(`/consigners/${consignerId}/home-teams`, {
+    method: 'PUT',
+    body: JSON.stringify(teams),
+  });
+}
+
+// ============================================
 // CONSIGNMENT ITEMS API
 // ============================================
 
@@ -159,6 +191,9 @@ export const consignmentsApi = {
   getConsignerStats,
   createConsigner,
   updateConsigner,
+  // Consigner Home Teams
+  getConsignerHomeTeams,
+  setConsignerHomeTeams,
   // Consignments
   getConsignments,
   getConsignment,
