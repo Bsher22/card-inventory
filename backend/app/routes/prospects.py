@@ -38,7 +38,7 @@ HEADERS = {
 
 # MLB team ID -> URL slug for Pipeline GraphQL queries
 _TEAM_SLUGS = {
-    108: "angels", 109: "diamondbacks", 110: "orioles", 111: "redsox",
+    108: "angels", 109: "dbacks", 110: "orioles", 111: "redsox",
     112: "cubs", 113: "reds", 114: "guardians", 115: "rockies",
     116: "tigers", 117: "astros", 118: "royals", 119: "dodgers",
     120: "nationals", 121: "mets", 133: "athletics", 134: "pirates",
