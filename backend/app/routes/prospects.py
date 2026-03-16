@@ -1,10 +1,11 @@
 """
 Top Prospects Routes
 
-Scrapes Just Baseball and FanGraphs Top 100 prospect lists,
+Fetches MLB Pipeline Top 100 via GraphQL and FanGraphs Top 100 via __NEXT_DATA__,
 caches results, and cross-references against inventory.
 """
 
+import json
 import re
 from typing import Optional
 
@@ -27,13 +28,44 @@ _fangraphs_cache: TTLCache = TTLCache(maxsize=5, ttl=21600)
 _team_prospects_cache: TTLCache = TTLCache(maxsize=60, ttl=21600)
 _mlb_orgs_cache: TTLCache = TTLCache(maxsize=5, ttl=86400)  # 24h for org list
 
-JUSTBASEBALL_URL = "https://www.justbaseball.com/prospects/top-100-mlb-prospects/"
+MLB_GRAPHQL_URL = "https://data-graph.mlb.com/graphql"
 FANGRAPHS_URL = "https://www.fangraphs.com/prospects/the-board/2026-prospect-list/summary?sort=-1,1&type=0&team=&pos=&pg=1"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
+
+# MLB team ID -> URL slug for Pipeline GraphQL queries
+_TEAM_SLUGS = {
+    108: "angels", 109: "diamondbacks", 110: "orioles", 111: "redsox",
+    112: "cubs", 113: "reds", 114: "guardians", 115: "rockies",
+    116: "tigers", 117: "astros", 118: "royals", 119: "dodgers",
+    120: "nationals", 121: "mets", 133: "athletics", 134: "pirates",
+    135: "padres", 136: "mariners", 137: "giants", 138: "cardinals",
+    139: "rays", 140: "rangers", 141: "bluejays", 142: "twins",
+    143: "phillies", 144: "braves", 145: "whitesox", 146: "marlins",
+    147: "yankees", 158: "brewers",
+}
+
+_PIPELINE_GRAPHQL_QUERY = """
+query ($slug: String!, $limit: Int!) {
+  getPlayerRankingsFromSelection(slug: $slug, limit: $limit) {
+    rank
+    playerEntity {
+      eta
+      position
+      player {
+        id
+        fullName
+        currentAge
+        team { name }
+        primaryPosition { abbreviation }
+      }
+    }
+  }
+}
+"""
 
 
 # ============================================
@@ -73,89 +105,63 @@ class TeamProspectsResponse(BaseModel):
 
 
 # ============================================
-# SCRAPING HELPERS
+# MLB PIPELINE GRAPHQL HELPERS
 # ============================================
 
+async def _fetch_pipeline_graphql(slug: str, limit: int = 100) -> list[dict]:
+    """Fetch prospect rankings from MLB Pipeline's GraphQL API."""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            MLB_GRAPHQL_URL,
+            json={
+                "query": _PIPELINE_GRAPHQL_QUERY,
+                "variables": {"slug": slug, "limit": limit},
+            },
+            headers=HEADERS,
+        )
+        if resp.status_code != 200:
+            return []
+
+    data = resp.json()
+    rankings = data.get("data", {}).get("getPlayerRankingsFromSelection", [])
+
+    prospects = []
+    for entry in rankings:
+        pe = entry.get("playerEntity", {})
+        player = pe.get("player", {})
+        name = player.get("fullName", "")
+        if not name:
+            continue
+
+        prospects.append({
+            "rank": entry.get("rank", len(prospects) + 1),
+            "name": name,
+            "team": player.get("team", {}).get("name", ""),
+            "position": pe.get("position", player.get("primaryPosition", {}).get("abbreviation", "")),
+            "age": player.get("currentAge"),
+        })
+
+    return prospects
+
+
 async def _scrape_pipeline() -> list[dict]:
-    """Scrape Just Baseball Top 100 prospects (replaces MLB Pipeline which is client-side rendered)."""
+    """Fetch MLB Pipeline Top 100 prospects via GraphQL API."""
     cache_key = "pipeline_top100"
     if cache_key in _pipeline_cache:
         return _pipeline_cache[cache_key]
 
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        resp = await client.get(JUSTBASEBALL_URL, headers=HEADERS)
-        if resp.status_code != 200:
-            raise HTTPException(
-                status_code=502,
-                detail=f"Just Baseball returned {resp.status_code}",
-            )
+    prospects = await _fetch_pipeline_graphql("sel-pr-2026-top100", limit=100)
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    prospects = []
+    _pipeline_cache[cache_key] = prospects
+    return prospects
 
-    # Just Baseball uses a WordPress block table with columns:
-    # Rank | Player | Team | Age | Level | Position | ETA | FV
-    tables = soup.select("table")
-    for table in tables:
-        headers = [th.get_text(strip=True).lower() for th in table.select("th")]
-        if not headers or "player" not in " ".join(headers):
-            continue
 
-        # Map header positions
-        col_map = {}
-        for i, h in enumerate(headers):
-            h_lower = h.lower()
-            if "rank" in h_lower or h_lower == "#":
-                col_map["rank"] = i
-            elif "player" in h_lower or "name" in h_lower:
-                col_map["name"] = i
-            elif "team" in h_lower:
-                col_map["team"] = i
-            elif "age" in h_lower:
-                col_map["age"] = i
-            elif "pos" in h_lower:
-                col_map["position"] = i
-
-        for row in table.select("tbody tr, tr"):
-            cells = row.select("td")
-            if not cells or len(cells) < 3:
-                continue
-
-            def _cell(key: str) -> str:
-                idx = col_map.get(key)
-                if idx is not None and idx < len(cells):
-                    return cells[idx].get_text(strip=True)
-                return ""
-
-            name = _cell("name")
-            if not name or name.lower() in ("player", "name"):
-                continue
-
-            rank_text = _cell("rank")
-            try:
-                rank = int(rank_text)
-            except (ValueError, TypeError):
-                rank = len(prospects) + 1
-
-            prospects.append({
-                "rank": rank,
-                "name": name,
-                "team": _cell("team"),
-                "position": _cell("position"),
-                "age": _parse_age(_cell("age")),
-            })
-
-        if prospects:
-            break
-
-    _pipeline_cache[cache_key] = prospects[:100]
-    return prospects[:100]
-
+# ============================================
+# FANGRAPHS SCRAPING
+# ============================================
 
 async def _scrape_fangraphs() -> list[dict]:
     """Scrape FanGraphs Top 100 prospects from The Board via __NEXT_DATA__ JSON."""
-    import json
-
     cache_key = "fangraphs_top100"
     if cache_key in _fangraphs_cache:
         return _fangraphs_cache[cache_key]
@@ -187,7 +193,6 @@ async def _scrape_fangraphs() -> list[dict]:
                 data = q.get("state", {}).get("data", [])
                 if not isinstance(data, list) or not data:
                     continue
-                # Check if this looks like prospect data
                 first = data[0] if data else {}
                 if "playerName" not in first and "PlayerName" not in first:
                     continue
@@ -229,18 +234,9 @@ async def _scrape_fangraphs() -> list[dict]:
     return prospects
 
 
-def _parse_age(text: str) -> Optional[int]:
-    """Parse age from text, returning None if not a valid age."""
-    if not text:
-        return None
-    try:
-        val = int(text)
-        if 15 <= val <= 40:
-            return val
-    except ValueError:
-        pass
-    return None
-
+# ============================================
+# SHARED HELPERS
+# ============================================
 
 def _normalize_name(name: str) -> str:
     """Normalize a player name for matching."""
@@ -329,14 +325,14 @@ async def _get_mlb_orgs() -> list[dict]:
 async def _scrape_team_prospects(team_id: int) -> tuple[str, list[dict]]:
     """
     Get top 30 prospects for an MLB organization.
-    Uses the MLB Stats API draft prospects endpoint and FanGraphs Board API.
+    Uses MLB Pipeline GraphQL API, falls back to FanGraphs.
     Returns (team_name, prospects_list).
     """
     cache_key = f"team_{team_id}"
     if cache_key in _team_prospects_cache:
         return _team_prospects_cache[cache_key]
 
-    # Get team name from orgs
+    # Get team name and abbreviation from orgs
     orgs = await _get_mlb_orgs()
     team_name = ""
     team_abbrev = ""
@@ -348,30 +344,13 @@ async def _scrape_team_prospects(team_id: int) -> tuple[str, list[dict]]:
 
     prospects = []
 
-    # Try MLB Stats API prospect rankings endpoint
-    try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-            resp = await client.get(
-                f"https://statsapi.mlb.com/api/v1/teams/{team_id}/prospects?season=2026",
-                headers=HEADERS,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                for i, p in enumerate(data.get("prospects", [])[:30], 1):
-                    person = p.get("person", {})
-                    prospects.append({
-                        "rank": p.get("rank", i),
-                        "name": person.get("fullName", ""),
-                        "team": team_name,
-                        "position": person.get("primaryPosition", {}).get("abbreviation", ""),
-                        "age": person.get("currentAge"),
-                    })
-    except Exception:
-        pass
+    # Try MLB Pipeline GraphQL API first
+    slug = _TEAM_SLUGS.get(team_id)
+    if slug:
+        prospects = await _fetch_pipeline_graphql(f"sel-pr-2026-{slug}", limit=30)
 
-    # If MLB API didn't return prospects, try FanGraphs Board page with team filter
+    # Fallback: FanGraphs Board page with team filter
     if not prospects and team_abbrev:
-        import json
         try:
             fg_url = (
                 f"https://www.fangraphs.com/prospects/the-board/2026-prospect-list/summary"
@@ -439,14 +418,14 @@ async def get_top_prospects(
     Get Top 100 prospects from MLB Pipeline and FanGraphs,
     cross-referenced against inventory.
     """
-    # Scrape both sources
+    # Fetch both sources
     pipeline_raw = []
     fangraphs_raw = []
 
     try:
         pipeline_raw = await _scrape_pipeline()
     except Exception as e:
-        print(f"Pipeline scrape failed: {e}")
+        print(f"Pipeline fetch failed: {e}")
 
     try:
         fangraphs_raw = await _scrape_fangraphs()
