@@ -18,6 +18,10 @@ import {
   Building2,
   CalendarDays,
   Star,
+  Boxes,
+  Compass,
+  Wrench,
+  TrendingUp,
 } from 'lucide-react';
 
 // Auth
@@ -43,6 +47,11 @@ import StandaloneItems from './pages/StandaloneItems';
 import Submitters from './pages/Submitters';
 import MilbSchedule from './pages/MilbSchedule';
 import TopProspects from './pages/TopProspects';
+import InventoryHub from './pages/InventoryHub';
+import ConsignmentsHub from './pages/ConsignmentsHub';
+import ScoutingHub from './pages/ScoutingHub';
+import ServicesHub from './pages/ServicesHub';
+import CommerceHub from './pages/CommerceHub';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,21 +64,11 @@ const queryClient = new QueryClient({
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/product-lines', icon: Package, label: 'Product Lines' },
-  { to: '/checklists', icon: FileSpreadsheet, label: 'Checklists' },
-  { to: '/upload', icon: Upload, label: 'Upload Checklist' },
-  { to: '/inventory', icon: BarChart3, label: 'Inventory' },
-  { to: '/memorabilia', icon: Trophy, label: 'Memorabilia' },
-  { to: '/consigners', icon: Users, label: 'Consigners' },
-  { to: '/consignments', icon: Send, label: 'Consignments' },
-  { to: '/milb-schedule', icon: CalendarDays, label: 'MiLB Schedule' },
-  { to: '/top-prospects', icon: Star, label: 'Top Prospects' },
-  { to: '/grading', icon: Award, label: 'Card Grading' },
-  { to: '/authentication', icon: ShieldCheck, label: 'Authentication' },
-  { to: '/submitters', icon: Building2, label: 'Submitters' },
-  { to: '/purchases', icon: ShoppingCart, label: 'Purchases' },
-  { to: '/sales', icon: DollarSign, label: 'Sales' },
-  { to: '/sales/ebay-import', icon: Store, label: 'eBay Import' },
+  { to: '/inventory-hub', icon: Boxes, label: 'Inventory' },
+  { to: '/consignments-hub', icon: Send, label: 'Consignments' },
+  { to: '/scouting', icon: Compass, label: 'Scouting' },
+  { to: '/services', icon: Wrench, label: 'Services' },
+  { to: '/commerce', icon: TrendingUp, label: 'Commerce' },
 ];
 
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -136,6 +135,59 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Hub pages */}
+            <Route
+              path="/inventory-hub"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <InventoryHub />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/consignments-hub"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ConsignmentsHub />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scouting"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ScoutingHub />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/services"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ServicesHub />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commerce"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <CommerceHub />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Sub-pages */}
             <Route
               path="/product-lines"
               element={
