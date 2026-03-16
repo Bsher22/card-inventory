@@ -42,6 +42,9 @@ from app.routes.bulk_import import router as bulk_import_router
 # MiLB Stats
 from app.routes.mlb_stats import router as mlb_stats_router
 
+# Top Prospects
+from app.routes.prospects import router as prospects_router
+
 settings = get_settings()
 
 
@@ -100,6 +103,7 @@ app.include_router(beckett_router)  # Beckett Import (has own /api/beckett prefi
 app.include_router(card_types_router)  # Card Types, Parallels & PDF Parsing
 app.include_router(bulk_import_router, prefix="/api", tags=["Bulk Import"])
 app.include_router(mlb_stats_router, prefix="/api", tags=["MiLB Stats"])
+app.include_router(prospects_router, prefix="/api", tags=["Top Prospects"])
 
 
 @app.get("/")

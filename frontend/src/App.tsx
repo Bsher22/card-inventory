@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Building2,
   CalendarDays,
+  Star,
 } from 'lucide-react';
 
 // Auth
@@ -41,6 +42,7 @@ import EbayImport from './pages/EbayImport';
 import StandaloneItems from './pages/StandaloneItems';
 import Submitters from './pages/Submitters';
 import MilbSchedule from './pages/MilbSchedule';
+import TopProspects from './pages/TopProspects';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +63,7 @@ const navItems = [
   { to: '/consigners', icon: Users, label: 'Consigners' },
   { to: '/consignments', icon: Send, label: 'Consignments' },
   { to: '/milb-schedule', icon: CalendarDays, label: 'MiLB Schedule' },
+  { to: '/top-prospects', icon: Star, label: 'Top Prospects' },
   { to: '/grading', icon: Award, label: 'Card Grading' },
   { to: '/authentication', icon: ShieldCheck, label: 'Authentication' },
   { to: '/submitters', icon: Building2, label: 'Submitters' },
@@ -209,6 +212,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <MilbSchedule />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/top-prospects"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <TopProspects />
                   </AppLayout>
                 </ProtectedRoute>
               }

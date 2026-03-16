@@ -44,6 +44,8 @@ export interface PlayerInventoryMatch {
   inventory_count: number;
   unsigned_count: number;
   signed_count: number;
+  prospect_rank_team: number | null;
+  prospect_rank_overall: number | null;
 }
 
 export interface GameWithInventory {

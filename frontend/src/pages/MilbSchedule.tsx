@@ -12,6 +12,7 @@ import {
   ChevronRight,
   X,
   Filter,
+  Star,
 } from 'lucide-react';
 import { api } from '../api';
 import type { MilbTeam, GameWithInventory, PlayerInventoryMatch } from '../api/mlbStatsApi';
@@ -515,7 +516,10 @@ function RosterTable({ players, teamName, accentColor }: RosterTableProps) {
               {withInventory.map((p) => (
                 <tr key={p.player_id} className={`border-b border-gray-50 bg-${accentColor}-50/30`}>
                   <td className="px-4 py-2.5 text-gray-400 text-xs">{p.jersey_number || '-'}</td>
-                  <td className="px-4 py-2.5 font-medium text-gray-900">{p.full_name}</td>
+                  <td className="px-4 py-2.5">
+                    <span className="font-medium text-gray-900">{p.full_name}</span>
+                    <ProspectBadge rankTeam={p.prospect_rank_team} rankOverall={p.prospect_rank_overall} />
+                  </td>
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{p.position}</td>
                   <td className="px-4 py-2.5 text-right">
                     <span className={`inline-flex items-center gap-1 text-${accentColor}-700 font-semibold`}>
@@ -542,7 +546,10 @@ function RosterTable({ players, teamName, accentColor }: RosterTableProps) {
             {withoutInventory.map((p) => (
               <tr key={p.player_id} className="border-b border-gray-50">
                 <td className="px-4 py-2 text-gray-400 text-xs w-12">{p.jersey_number || '-'}</td>
-                <td className="px-4 py-2 text-gray-500">{p.full_name}</td>
+                <td className="px-4 py-2">
+                  <span className="text-gray-500">{p.full_name}</span>
+                  <ProspectBadge rankTeam={p.prospect_rank_team} rankOverall={p.prospect_rank_overall} />
+                </td>
                 <td className="px-4 py-2 text-gray-400 text-xs w-16">{p.position}</td>
                 <td className="px-4 py-2 text-right text-gray-300 w-24">—</td>
                 <td className="px-4 py-2 w-24"></td>
@@ -553,5 +560,33 @@ function RosterTable({ players, teamName, accentColor }: RosterTableProps) {
         </table>
       </div>
     </div>
+  );
+}
+
+
+// ============================================
+// PROSPECT BADGE
+// ============================================
+
+function ProspectBadge({
+  rankTeam,
+  rankOverall,
+}: {
+  rankTeam: number | null;
+  rankOverall: number | null;
+}) {
+  if (!rankTeam) return null;
+
+  return (
+    <span
+      className="ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-medium"
+      title={`#${rankTeam} team prospect${rankOverall ? `, #${rankOverall} overall` : ''}`}
+    >
+      <Star size={10} className="fill-amber-500 text-amber-500" />
+      #{rankTeam} prospect
+      {rankOverall && (
+        <span className="text-amber-600 font-normal ml-0.5">(#{rankOverall} overall)</span>
+      )}
+    </span>
   );
 }

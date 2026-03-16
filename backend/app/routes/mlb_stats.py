@@ -28,6 +28,7 @@ MILB_SPORT_IDS = "11,12,13,14,16,17,5442"
 _teams_cache: TTLCache = TTLCache(maxsize=10, ttl=3600)
 _schedule_cache: TTLCache = TTLCache(maxsize=200, ttl=1800)
 _roster_cache: TTLCache = TTLCache(maxsize=200, ttl=1800)
+_parent_org_cache: TTLCache = TTLCache(maxsize=500, ttl=3600)  # MiLB team -> parent MLB org
 
 
 # ============================================
@@ -43,6 +44,8 @@ class MilbTeam(BaseModel):
     venue: Optional[str] = None
     sport_id: Optional[int] = None
     sport_name: Optional[str] = None
+    parent_org_id: Optional[int] = None
+    parent_org_name: Optional[str] = None
 
 
 class ScheduleGame(BaseModel):
@@ -71,6 +74,8 @@ class PlayerInventoryMatch(BaseModel):
     inventory_count: int = 0
     unsigned_count: int = 0
     signed_count: int = 0
+    prospect_rank_team: Optional[int] = None
+    prospect_rank_overall: Optional[int] = None
 
 
 class GameWithInventory(BaseModel):
@@ -128,6 +133,8 @@ async def get_milb_teams(season: int = Query(default=2026)):
             venue=t.get("venue", {}).get("name"),
             sport_id=t.get("sport", {}).get("id"),
             sport_name=t.get("sport", {}).get("name"),
+            parent_org_id=t.get("parentOrgId"),
+            parent_org_name=t.get("parentOrgName"),
         )
         for t in data.get("teams", [])
     ]
@@ -253,14 +260,21 @@ async def get_schedule_with_inventory(
     # Batch inventory lookup: find all players we have inventory for
     inventory_by_name = await _batch_inventory_lookup(db, list(all_player_names))
 
+    # Build prospect ranking lookups for all teams in the schedule
+    team_rank_by_name, overall_rank_by_name = await _build_prospect_lookups(team_ids, season)
+
     # Build response
     result = []
     for g in games:
         home_roster = rosters.get(g.home_team_id, [])
         away_roster = rosters.get(g.away_team_id, [])
 
-        home_matches = _match_roster_to_inventory(home_roster, inventory_by_name)
-        away_matches = _match_roster_to_inventory(away_roster, inventory_by_name)
+        home_matches = _match_roster_to_inventory(
+            home_roster, inventory_by_name, team_rank_by_name, overall_rank_by_name
+        )
+        away_matches = _match_roster_to_inventory(
+            away_roster, inventory_by_name, team_rank_by_name, overall_rank_by_name
+        )
 
         result.append(GameWithInventory(
             date=g.date,
@@ -346,15 +360,103 @@ async def _batch_inventory_lookup(
     return inventory_map
 
 
+async def _get_parent_org_id(milb_team_id: int, season: int = 2026) -> Optional[int]:
+    """Get the parent MLB org ID for a MiLB team."""
+    cache_key = f"parent_{milb_team_id}"
+    if cache_key in _parent_org_cache:
+        return _parent_org_cache[cache_key]
+
+    # Check if teams are already cached
+    teams_key = f"teams_{season}"
+    if teams_key in _teams_cache:
+        for t in _teams_cache[teams_key]:
+            if t.id == milb_team_id and t.parent_org_id:
+                _parent_org_cache[cache_key] = t.parent_org_id
+                return t.parent_org_id
+
+    # Fetch team info directly
+    try:
+        data = await _fetch_mlb_api(f"{MLB_API_BASE}/teams/{milb_team_id}")
+        teams = data.get("teams", [])
+        if teams:
+            parent_id = teams[0].get("parentOrgId")
+            if parent_id:
+                _parent_org_cache[cache_key] = parent_id
+                return parent_id
+    except Exception:
+        pass
+
+    return None
+
+
+async def _build_prospect_lookups(
+    team_ids: set[int],
+    season: int = 2026,
+) -> tuple[dict[str, int], dict[str, int]]:
+    """
+    Build prospect rank lookup dicts for a set of MiLB team IDs.
+
+    Returns:
+        (team_rank_by_name, overall_rank_by_name)
+        Both keyed by normalized player name.
+    """
+    from app.routes.prospects import _scrape_team_prospects, _scrape_pipeline, _normalize_name as _pnorm
+
+    team_rank_by_name: dict[str, int] = {}
+    overall_rank_by_name: dict[str, int] = {}
+
+    # Get parent org IDs for all MiLB teams
+    parent_orgs: dict[int, int] = {}  # milb_team_id -> parent_org_id
+    seen_orgs: set[int] = set()
+    for tid in team_ids:
+        parent_id = await _get_parent_org_id(tid, season)
+        if parent_id:
+            parent_orgs[tid] = parent_id
+            seen_orgs.add(parent_id)
+
+    # Fetch team prospects for each unique parent org
+    for org_id in seen_orgs:
+        try:
+            _, prospects = await _scrape_team_prospects(org_id)
+            for p in prospects:
+                name = p.get("name", "")
+                if name:
+                    normalized = _pnorm(name)
+                    # Keep the best (lowest) rank if player appears multiple times
+                    rank = p.get("rank", 0)
+                    if normalized not in team_rank_by_name or rank < team_rank_by_name[normalized]:
+                        team_rank_by_name[normalized] = rank
+        except Exception:
+            pass
+
+    # Fetch overall top 100 for overall ranking
+    try:
+        pipeline = await _scrape_pipeline()
+        for p in pipeline:
+            name = p.get("name", "")
+            if name:
+                normalized = _pnorm(name)
+                overall_rank_by_name[normalized] = p.get("rank", 0)
+    except Exception:
+        pass
+
+    return team_rank_by_name, overall_rank_by_name
+
+
 def _match_roster_to_inventory(
     roster: list[RosterPlayer],
     inventory_by_name: dict[str, dict],
+    team_rank_by_name: Optional[dict[str, int]] = None,
+    overall_rank_by_name: Optional[dict[str, int]] = None,
 ) -> list[PlayerInventoryMatch]:
-    """Match roster players against inventory lookup results."""
+    """Match roster players against inventory lookup results and prospect rankings."""
     matches = []
     for p in roster:
         normalized = _normalize_name(p.full_name)
         inv = inventory_by_name.get(normalized)
+
+        team_rank = team_rank_by_name.get(normalized) if team_rank_by_name else None
+        overall_rank = overall_rank_by_name.get(normalized) if overall_rank_by_name else None
 
         matches.append(PlayerInventoryMatch(
             player_id=p.player_id,
@@ -365,8 +467,15 @@ def _match_roster_to_inventory(
             inventory_count=inv["total"] if inv else 0,
             unsigned_count=inv["unsigned"] if inv else 0,
             signed_count=inv["signed"] if inv else 0,
+            prospect_rank_team=team_rank,
+            prospect_rank_overall=overall_rank,
         ))
 
-    # Sort: players with inventory first, then alphabetical
-    matches.sort(key=lambda m: (not m.has_inventory, m.full_name))
+    # Sort: prospects first (by rank), then inventory, then alphabetical
+    matches.sort(key=lambda m: (
+        m.prospect_rank_team is None,  # prospects first
+        m.prospect_rank_team or 999,
+        not m.has_inventory,
+        m.full_name,
+    ))
     return matches

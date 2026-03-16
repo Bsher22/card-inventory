@@ -20,6 +20,7 @@ import {
   Users,
   Package,
   ChevronRight,
+  Star,
 } from 'lucide-react';
 import { api } from '../api';
 import type {
@@ -635,6 +636,18 @@ function RosterList({ players, accentColor }: RosterListProps) {
               <span className={p.has_inventory ? 'font-medium text-gray-900' : 'text-gray-600'}>
                 {p.full_name}
               </span>
+              {p.prospect_rank_team && (
+                <span
+                  className="ml-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-medium"
+                  title={`#${p.prospect_rank_team} team prospect${p.prospect_rank_overall ? `, #${p.prospect_rank_overall} overall` : ''}`}
+                >
+                  <Star size={8} className="fill-amber-500 text-amber-500" />
+                  #{p.prospect_rank_team}
+                  {p.prospect_rank_overall && (
+                    <span className="text-amber-600 font-normal">(#{p.prospect_rank_overall})</span>
+                  )}
+                </span>
+              )}
             </td>
             <td className="px-3 py-1.5 text-gray-400">{p.position}</td>
             <td className="px-3 py-1.5 text-right">
