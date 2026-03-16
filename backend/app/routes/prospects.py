@@ -1,7 +1,7 @@
 """
 Top Prospects Routes
 
-Scrapes MLB Pipeline and FanGraphs Top 100 prospect lists,
+Scrapes Just Baseball and FanGraphs Top 100 prospect lists,
 caches results, and cross-references against inventory.
 """
 
@@ -27,7 +27,7 @@ _fangraphs_cache: TTLCache = TTLCache(maxsize=5, ttl=21600)
 _team_prospects_cache: TTLCache = TTLCache(maxsize=60, ttl=21600)
 _mlb_orgs_cache: TTLCache = TTLCache(maxsize=5, ttl=86400)  # 24h for org list
 
-MLB_PIPELINE_URL = "https://www.mlb.com/prospects/top100"
+JUSTBASEBALL_URL = "https://www.justbaseball.com/prospects/top-100-mlb-prospects/"
 FANGRAPHS_URL = "https://www.fangraphs.com/prospects/the-board/2026-prospect-list/summary?sort=-1,1&type=0&team=&pos=&pg=1"
 
 HEADERS = {
@@ -77,106 +77,85 @@ class TeamProspectsResponse(BaseModel):
 # ============================================
 
 async def _scrape_pipeline() -> list[dict]:
-    """Scrape MLB Pipeline Top 100 prospects."""
+    """Scrape Just Baseball Top 100 prospects (replaces MLB Pipeline which is client-side rendered)."""
     cache_key = "pipeline_top100"
     if cache_key in _pipeline_cache:
         return _pipeline_cache[cache_key]
 
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        resp = await client.get(MLB_PIPELINE_URL, headers=HEADERS)
+        resp = await client.get(JUSTBASEBALL_URL, headers=HEADERS)
         if resp.status_code != 200:
             raise HTTPException(
                 status_code=502,
-                detail=f"MLB Pipeline returned {resp.status_code}",
+                detail=f"Just Baseball returned {resp.status_code}",
             )
 
     soup = BeautifulSoup(resp.text, "html.parser")
     prospects = []
 
-    # MLB Pipeline uses prospect cards with rank, name, team, position
-    # Try multiple selectors for resilience
-    rows = soup.select(".prospects-table__row, .top100__row, tr[data-idx]")
+    # Just Baseball uses a WordPress block table with columns:
+    # Rank | Player | Team | Age | Level | Position | ETA | FV
+    tables = soup.select("table")
+    for table in tables:
+        headers = [th.get_text(strip=True).lower() for th in table.select("th")]
+        if not headers or "player" not in " ".join(headers):
+            continue
 
-    if not rows:
-        # Fallback: try to find any list of prospects
-        # Look for numbered entries with player names
-        items = soup.select(".prospect-item, .player-list__item, [class*='prospect']")
-        for i, item in enumerate(items[:100], 1):
-            name_el = item.select_one(".prospect-item__name, .player-name, a")
-            team_el = item.select_one(".prospect-item__team, .team-name")
-            pos_el = item.select_one(".prospect-item__position, .position")
-            age_el = item.select_one(".prospect-item__age, .age")
+        # Map header positions
+        col_map = {}
+        for i, h in enumerate(headers):
+            h_lower = h.lower()
+            if "rank" in h_lower or h_lower == "#":
+                col_map["rank"] = i
+            elif "player" in h_lower or "name" in h_lower:
+                col_map["name"] = i
+            elif "team" in h_lower:
+                col_map["team"] = i
+            elif "age" in h_lower:
+                col_map["age"] = i
+            elif "pos" in h_lower:
+                col_map["position"] = i
 
-            if name_el:
-                prospects.append({
-                    "rank": i,
-                    "name": name_el.get_text(strip=True),
-                    "team": team_el.get_text(strip=True) if team_el else "",
-                    "position": pos_el.get_text(strip=True) if pos_el else "",
-                    "age": _parse_age(age_el.get_text(strip=True)) if age_el else None,
-                })
-
-    if not prospects:
-        # Final fallback: parse any table on the page
-        tables = soup.select("table")
-        for table in tables:
-            headers = [th.get_text(strip=True).lower() for th in table.select("th")]
-            if not headers:
+        for row in table.select("tbody tr, tr"):
+            cells = row.select("td")
+            if not cells or len(cells) < 3:
                 continue
-            for row in table.select("tbody tr"):
-                cells = [td.get_text(strip=True) for td in row.select("td")]
-                if len(cells) >= 2:
-                    entry = {"rank": len(prospects) + 1, "name": "", "team": "", "position": "", "age": None}
-                    for j, h in enumerate(headers):
-                        if j >= len(cells):
-                            break
-                        if "rank" in h or "#" in h:
-                            try:
-                                entry["rank"] = int(cells[j])
-                            except ValueError:
-                                pass
-                        elif "name" in h or "player" in h:
-                            entry["name"] = cells[j]
-                        elif "team" in h or "org" in h:
-                            entry["team"] = cells[j]
-                        elif "pos" in h:
-                            entry["position"] = cells[j]
-                        elif "age" in h:
-                            entry["age"] = _parse_age(cells[j])
-                    if entry["name"]:
-                        prospects.append(entry)
 
-    # Also try JSON-LD or script data
-    if not prospects:
-        for script in soup.select("script"):
-            text = script.string or ""
-            if "prospects" in text.lower() and "rank" in text.lower():
-                # Try to extract JSON data from script tags
-                import json
-                try:
-                    # Look for JSON arrays in script content
-                    matches = re.findall(r'\[{.*?"rank".*?}\]', text, re.DOTALL)
-                    for match in matches:
-                        data = json.loads(match)
-                        for item in data[:100]:
-                            prospects.append({
-                                "rank": item.get("rank", len(prospects) + 1),
-                                "name": item.get("name", item.get("playerName", item.get("fullName", ""))),
-                                "team": item.get("team", item.get("orgName", "")),
-                                "position": item.get("position", item.get("pos", "")),
-                                "age": item.get("age"),
-                            })
-                        if prospects:
-                            break
-                except (json.JSONDecodeError, TypeError):
-                    continue
+            def _cell(key: str) -> str:
+                idx = col_map.get(key)
+                if idx is not None and idx < len(cells):
+                    return cells[idx].get_text(strip=True)
+                return ""
+
+            name = _cell("name")
+            if not name or name.lower() in ("player", "name"):
+                continue
+
+            rank_text = _cell("rank")
+            try:
+                rank = int(rank_text)
+            except (ValueError, TypeError):
+                rank = len(prospects) + 1
+
+            prospects.append({
+                "rank": rank,
+                "name": name,
+                "team": _cell("team"),
+                "position": _cell("position"),
+                "age": _parse_age(_cell("age")),
+            })
+
+        if prospects:
+            break
 
     _pipeline_cache[cache_key] = prospects[:100]
     return prospects[:100]
 
 
 async def _scrape_fangraphs() -> list[dict]:
-    """Scrape FanGraphs Top 100 prospects from The Board."""
+    """Scrape FanGraphs Top 100 prospects from The Board via __NEXT_DATA__ JSON."""
+    import json
+
     cache_key = "fangraphs_top100"
     if cache_key in _fangraphs_cache:
         return _fangraphs_cache[cache_key]
@@ -192,82 +171,62 @@ async def _scrape_fangraphs() -> list[dict]:
     soup = BeautifulSoup(resp.text, "html.parser")
     prospects = []
 
-    # FanGraphs "The Board" uses a table structure
-    table = soup.select_one("table.prospect-table, .prospects-board table, table")
-
-    if table:
-        rows = table.select("tbody tr")
-        for row in rows:
-            cells = row.select("td")
-            if len(cells) < 2:
-                continue
-
-            # Try to identify columns by header
-            name_cell = None
-            for cell in cells:
-                link = cell.select_one("a")
-                if link and "/players/" in (link.get("href") or ""):
-                    name_cell = cell
-                    break
-
-            if not name_cell:
-                # Fallback: second cell is usually the name
-                name_cell = cells[1] if len(cells) > 1 else cells[0]
-
-            name = name_cell.get_text(strip=True)
-            if not name or name.lower() in ("name", "player"):
-                continue
-
-            entry = {
-                "rank": len(prospects) + 1,
-                "name": name,
-                "team": "",
-                "position": "",
-                "age": None,
-            }
-
-            # Try to extract rank from first cell
-            try:
-                entry["rank"] = int(cells[0].get_text(strip=True))
-            except (ValueError, IndexError):
-                pass
-
-            # Look for team/position/age in remaining cells
-            for cell in cells:
-                text = cell.get_text(strip=True)
-                if len(text) <= 4 and text.upper() in (
-                    "SS", "2B", "3B", "1B", "C", "OF", "CF", "RF", "LF",
-                    "RHP", "LHP", "SP", "RP", "DH", "P", "IF", "UTIL"
-                ):
-                    entry["position"] = text
-                elif _parse_age(text) and not entry["age"]:
-                    entry["age"] = _parse_age(text)
-
-            prospects.append(entry)
-
-    # If table parsing failed, try an alternative API approach
-    if not prospects:
-        # FanGraphs sometimes loads data via AJAX
-        api_url = "https://www.fangraphs.com/api/prospects/board/prospects-list?type=0&team=&pos=&pg=1"
+    # FanGraphs embeds all prospect data in __NEXT_DATA__ script tag
+    next_data_tag = soup.select_one("script#__NEXT_DATA__")
+    if next_data_tag and next_data_tag.string:
         try:
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-                resp = await client.get(api_url, headers=HEADERS)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    items = data if isinstance(data, list) else data.get("data", data.get("prospects", []))
-                    for i, item in enumerate(items[:100], 1):
-                        prospects.append({
-                            "rank": item.get("rank", item.get("Rank", i)),
-                            "name": item.get("PlayerName", item.get("name", item.get("minorMasterName", ""))),
-                            "team": item.get("Team", item.get("team", item.get("Org", ""))),
-                            "position": item.get("Position", item.get("position", item.get("Pos", ""))),
-                            "age": item.get("Age", item.get("age")),
-                        })
-        except Exception:
+            next_data = json.loads(next_data_tag.string)
+            # Navigate: props.pageProps.dehydratedState.queries[].state.data
+            queries = (
+                next_data.get("props", {})
+                .get("pageProps", {})
+                .get("dehydratedState", {})
+                .get("queries", [])
+            )
+            for q in queries:
+                data = q.get("state", {}).get("data", [])
+                if not isinstance(data, list) or not data:
+                    continue
+                # Check if this looks like prospect data
+                first = data[0] if data else {}
+                if "playerName" not in first and "PlayerName" not in first:
+                    continue
+
+                for item in data:
+                    name = item.get("playerName", item.get("PlayerName", ""))
+                    if not name:
+                        continue
+                    rank = item.get("Ovr_Rank", item.get("ovr_Rank", len(prospects) + 1))
+                    age_raw = item.get("Age", item.get("age"))
+                    age = None
+                    if age_raw is not None:
+                        try:
+                            age = int(float(age_raw))
+                            if not (15 <= age <= 40):
+                                age = None
+                        except (ValueError, TypeError):
+                            pass
+
+                    prospects.append({
+                        "rank": rank,
+                        "name": name,
+                        "team": item.get("Team", item.get("team", "")),
+                        "position": item.get("Position", item.get("position", "")),
+                        "age": age,
+                    })
+
+                if prospects:
+                    break
+        except (json.JSONDecodeError, KeyError, TypeError):
             pass
 
-    _fangraphs_cache[cache_key] = prospects[:100]
-    return prospects[:100]
+    # Sort by rank and take top 100
+    if prospects:
+        prospects.sort(key=lambda p: p.get("rank", 999))
+        prospects = prospects[:100]
+
+    _fangraphs_cache[cache_key] = prospects
+    return prospects
 
 
 def _parse_age(text: str) -> Optional[int]:
@@ -410,76 +369,62 @@ async def _scrape_team_prospects(team_id: int) -> tuple[str, list[dict]]:
     except Exception:
         pass
 
-    # If MLB API didn't return prospects, try Pipeline team page
-    if not prospects:
-        try:
-            # MLB Pipeline team prospect pages
-            slug_map = _get_team_slug(team_id)
-            if slug_map:
-                url = f"https://www.mlb.com/{slug_map}/prospects"
-                async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
-                    resp = await client.get(url, headers=HEADERS)
-                    if resp.status_code == 200:
-                        soup = BeautifulSoup(resp.text, "html.parser")
-                        # Try to find prospect entries
-                        items = soup.select("[class*='prospect'], .player-list__item, tr[data-idx]")
-                        for i, item in enumerate(items[:30], 1):
-                            name_el = item.select_one("a, .player-name, [class*='name']")
-                            pos_el = item.select_one("[class*='position'], .position")
-                            if name_el:
-                                name_text = name_el.get_text(strip=True)
-                                if name_text and name_text.lower() not in ("name", "player"):
-                                    prospects.append({
-                                        "rank": i,
-                                        "name": name_text,
-                                        "team": team_name,
-                                        "position": pos_el.get_text(strip=True) if pos_el else "",
-                                        "age": None,
-                                    })
-        except Exception:
-            pass
-
-    # If still no prospects, try FanGraphs Board API with team filter
+    # If MLB API didn't return prospects, try FanGraphs Board page with team filter
     if not prospects and team_abbrev:
+        import json
         try:
             fg_url = (
-                f"https://www.fangraphs.com/api/prospects/board/prospects-list"
-                f"?type=0&team={team_abbrev}&pos=&pg=1"
+                f"https://www.fangraphs.com/prospects/the-board/2026-prospect-list/summary"
+                f"?sort=-1,1&type=0&team={team_abbrev}&pos=&pg=1"
             )
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
                 resp = await client.get(fg_url, headers=HEADERS)
                 if resp.status_code == 200:
-                    data = resp.json()
-                    items = data if isinstance(data, list) else data.get("data", data.get("prospects", []))
-                    for i, item in enumerate(items[:30], 1):
-                        prospects.append({
-                            "rank": item.get("rank", item.get("Rank", i)),
-                            "name": item.get("PlayerName", item.get("name", item.get("minorMasterName", ""))),
-                            "team": team_name,
-                            "position": item.get("Position", item.get("position", item.get("Pos", ""))),
-                            "age": item.get("Age", item.get("age")),
-                        })
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    next_data_tag = soup.select_one("script#__NEXT_DATA__")
+                    if next_data_tag and next_data_tag.string:
+                        next_data = json.loads(next_data_tag.string)
+                        queries = (
+                            next_data.get("props", {})
+                            .get("pageProps", {})
+                            .get("dehydratedState", {})
+                            .get("queries", [])
+                        )
+                        for q in queries:
+                            data = q.get("state", {}).get("data", [])
+                            if not isinstance(data, list) or not data:
+                                continue
+                            first = data[0] if data else {}
+                            if "playerName" not in first and "PlayerName" not in first:
+                                continue
+                            for i, item in enumerate(data[:30], 1):
+                                name = item.get("playerName", item.get("PlayerName", ""))
+                                if not name:
+                                    continue
+                                age_raw = item.get("Age", item.get("age"))
+                                age = None
+                                if age_raw is not None:
+                                    try:
+                                        age = int(float(age_raw))
+                                        if not (15 <= age <= 40):
+                                            age = None
+                                    except (ValueError, TypeError):
+                                        pass
+                                prospects.append({
+                                    "rank": item.get("Org_Rank", i),
+                                    "name": name,
+                                    "team": team_name,
+                                    "position": item.get("Position", item.get("position", "")),
+                                    "age": age,
+                                })
+                            if prospects:
+                                break
         except Exception:
             pass
 
     result = (team_name, prospects[:30])
     _team_prospects_cache[cache_key] = result
     return result
-
-
-def _get_team_slug(team_id: int) -> Optional[str]:
-    """Map MLB team ID to URL slug for Pipeline pages."""
-    slugs = {
-        108: "angels", 109: "diamondbacks", 110: "orioles", 111: "redsox",
-        112: "cubs", 113: "reds", 114: "guardians", 115: "rockies",
-        116: "tigers", 117: "astros", 118: "royals", 119: "dodgers",
-        120: "nationals", 121: "mets", 133: "athletics", 134: "pirates",
-        135: "padres", 136: "mariners", 137: "giants", 138: "cardinals",
-        139: "rays", 140: "rangers", 141: "bluejays", 142: "twins",
-        143: "phillies", 144: "braves", 145: "whitesox", 146: "marlins",
-        147: "yankees", 158: "brewers",
-    }
-    return slugs.get(team_id)
 
 
 # ============================================

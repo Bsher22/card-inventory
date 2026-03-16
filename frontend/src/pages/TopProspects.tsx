@@ -1,5 +1,5 @@
 // src/pages/TopProspects.tsx
-// Top 100 Prospects from MLB Pipeline and FanGraphs with inventory cross-reference
+// Top 100 Prospects from Just Baseball and FanGraphs with inventory cross-reference
 // Plus per-team top 30 prospects view
 
 import React, { useState } from 'react';
@@ -147,7 +147,7 @@ export default function TopProspects() {
           </h1>
           <p className="text-gray-500 text-sm mt-1">
             {viewMode === 'top100'
-              ? 'MLB Pipeline & FanGraphs Top 100 with inventory cross-reference'
+              ? 'Just Baseball & FanGraphs Top 100 with inventory cross-reference'
               : teamData?.team_name
                 ? `${teamData.team_name} — Top 30 Prospects`
                 : 'Select a team to view their top 30 prospects'}
@@ -200,7 +200,7 @@ export default function TopProspects() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            MLB Pipeline
+            Just Baseball
             {top100Data?.pipeline?.length ? (
               <span className="ml-1 text-xs text-slate-400">({top100Data.pipeline.length})</span>
             ) : null}
