@@ -13,7 +13,7 @@ import httpx
 from cachetools import TTLCache
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select, func, or_
+from sqlalchemy import case, select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -334,10 +334,10 @@ async def _batch_inventory_lookup(
             func.coalesce(Player.name_normalized, func.lower(Checklist.player_name_raw)).label("player_name"),
             func.sum(Inventory.quantity).label("total_qty"),
             func.sum(
-                func.case((Inventory.is_signed == False, Inventory.quantity), else_=0)
+                case((Inventory.is_signed == False, Inventory.quantity), else_=0)
             ).label("unsigned_qty"),
             func.sum(
-                func.case((Inventory.is_signed == True, Inventory.quantity), else_=0)
+                case((Inventory.is_signed == True, Inventory.quantity), else_=0)
             ).label("signed_qty"),
         )
         .select_from(Inventory)
