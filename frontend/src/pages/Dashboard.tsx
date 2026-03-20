@@ -1,22 +1,29 @@
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Package, 
-  DollarSign, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Package,
+  DollarSign,
   Users,
-  BarChart3 
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  MapPin,
 } from 'lucide-react';
 import { api } from '../api';
 import type { InventoryAnalytics, SalesAnalytics } from '../types';
+import type { Consigner } from '../types/consignments';
+import type { GameWithInventory } from '../api/mlbStatsApi';
 
-function StatCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
   trend,
-  trendValue 
+  trendValue
 }: {
   title: string;
   value: string;
@@ -66,6 +73,251 @@ function formatCurrency(value: number): string {
 function formatNumber(value: number): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
+
+// ============================================
+// CONSIGNER SCHEDULE SECTION
+// ============================================
+
+interface DashboardGame {
+  game: GameWithInventory;
+  consigners: string[];
+}
+
+const CONSIGNER_COLORS = [
+  'bg-emerald-100 text-emerald-700',
+  'bg-blue-100 text-blue-700',
+  'bg-purple-100 text-purple-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+  'bg-cyan-100 text-cyan-700',
+];
+
+function ConsignerScheduleSection() {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const monthStart = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-01`;
+  const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+  const monthEnd = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+
+  const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const { data: consigners } = useQuery<Consigner[]>({
+    queryKey: ['consigners', true],
+    queryFn: () => api.consignments.getConsigners({ active_only: true }),
+  });
+
+  // Build team → consigner names map and get unique team IDs
+  const { teamConsignerMap, uniqueTeamIds, consignerColorMap } = useMemo(() => {
+    const map = new Map<number, string[]>();
+    const colorMap = new Map<string, string>();
+    let colorIdx = 0;
+
+    for (const c of consigners || []) {
+      if (!c.home_teams?.length) continue;
+      if (!colorMap.has(c.name)) {
+        colorMap.set(c.name, CONSIGNER_COLORS[colorIdx % CONSIGNER_COLORS.length]);
+        colorIdx++;
+      }
+      for (const ht of c.home_teams) {
+        const existing = map.get(ht.team_id) || [];
+        if (!existing.includes(c.name)) {
+          existing.push(c.name);
+        }
+        map.set(ht.team_id, existing);
+      }
+    }
+    return {
+      teamConsignerMap: map,
+      uniqueTeamIds: [...map.keys()],
+      consignerColorMap: colorMap,
+    };
+  }, [consigners]);
+
+  const { data: scheduleData, isLoading: loadingSchedule } = useQuery({
+    queryKey: ['dashboard-schedule', uniqueTeamIds, monthStart, monthEnd],
+    queryFn: async () => {
+      const results = await Promise.all(
+        uniqueTeamIds.map(teamId =>
+          api.mlbStats.getScheduleWithInventory({
+            team_id: teamId,
+            start_date: monthStart,
+            end_date: monthEnd,
+          }).catch(() => [] as GameWithInventory[])
+        )
+      );
+      return results;
+    },
+    enabled: uniqueTeamIds.length > 0,
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // Merge, dedup, annotate with consigners, group by date
+  const gamesByDate = useMemo(() => {
+    if (!scheduleData) return new Map<string, DashboardGame[]>();
+
+    const seen = new Map<number, DashboardGame>();
+
+    scheduleData.forEach((games, idx) => {
+      const teamId = uniqueTeamIds[idx];
+      const consignerNames = teamConsignerMap.get(teamId) || [];
+
+      for (const game of games) {
+        const existing = seen.get(game.game_pk);
+        if (existing) {
+          // Add consigners that aren't already listed
+          for (const name of consignerNames) {
+            if (!existing.consigners.includes(name)) {
+              existing.consigners.push(name);
+            }
+          }
+        } else {
+          // Only include games where one of our consigner's home teams is the home team
+          if (teamConsignerMap.has(game.home_team_id)) {
+            seen.set(game.game_pk, {
+              game,
+              consigners: [...consignerNames],
+            });
+          }
+        }
+      }
+    });
+
+    // Group by date
+    const grouped = new Map<string, DashboardGame[]>();
+    const sorted = [...seen.values()].sort((a, b) => a.game.date.localeCompare(b.game.date));
+
+    for (const entry of sorted) {
+      const dateGames = grouped.get(entry.game.date) || [];
+      dateGames.push(entry);
+      grouped.set(entry.game.date, dateGames);
+    }
+
+    return grouped;
+  }, [scheduleData, uniqueTeamIds, teamConsignerMap]);
+
+  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+
+  const hasHomeTeams = uniqueTeamIds.length > 0;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+      {/* Header with month nav */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Calendar className="text-emerald-600" size={20} />
+          <h3 className="text-lg font-semibold text-gray-900">Consigner Schedule</h3>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={prevMonth}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <ChevronLeft size={18} className="text-gray-600" />
+          </button>
+          <span className="text-sm font-medium text-gray-700 min-w-[140px] text-center">
+            {monthLabel}
+          </span>
+          <button
+            onClick={nextMonth}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <ChevronRight size={18} className="text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {!hasHomeTeams ? (
+        <p className="text-sm text-gray-500 py-6 text-center">
+          No consigner home teams configured. Add home teams to consigners to see their game schedules.
+        </p>
+      ) : loadingSchedule ? (
+        <div className="space-y-3 animate-pulse">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-12 bg-gray-100 rounded-lg" />
+          ))}
+        </div>
+      ) : gamesByDate.size === 0 ? (
+        <p className="text-sm text-gray-500 py-6 text-center">
+          No games scheduled for {monthLabel}
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {[...gamesByDate.entries()].map(([dateStr, games]) => {
+            const dateObj = new Date(dateStr + 'T12:00:00');
+            const dayLabel = dateObj.toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            });
+
+            return (
+              <div key={dateStr}>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  {dayLabel}
+                </div>
+                <div className="space-y-2">
+                  {games.map(({ game, consigners: gameConsigners }) => (
+                    <div
+                      key={game.game_pk}
+                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2.5 px-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                    >
+                      {/* Matchup */}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {game.away_team} <span className="text-gray-400">@</span> {game.home_team}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                          <MapPin size={11} />
+                          <span className="truncate">{game.venue}</span>
+                        </div>
+                      </div>
+
+                      {/* Consigner badges */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {gameConsigners.map(name => (
+                          <span
+                            key={name}
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${consignerColorMap.get(name) || CONSIGNER_COLORS[0]}`}
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Inventory match */}
+                      <div className="flex gap-3 text-xs shrink-0">
+                        <span className="text-gray-500">
+                          H:{' '}
+                          <span className={game.home_players_in_inventory > 0 ? 'font-medium text-emerald-600' : 'text-gray-400'}>
+                            {game.home_players_in_inventory}/{game.home_roster.length}
+                          </span>
+                        </span>
+                        <span className="text-gray-500">
+                          A:{' '}
+                          <span className={game.away_players_in_inventory > 0 ? 'font-medium text-emerald-600' : 'text-gray-400'}>
+                            {game.away_players_in_inventory}/{game.away_roster.length}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// MAIN DASHBOARD
+// ============================================
 
 export default function Dashboard() {
   const { data: inventoryAnalytics, isLoading: loadingInventory } = useQuery<InventoryAnalytics>({
@@ -125,6 +377,9 @@ export default function Dashboard() {
             />
           </div>
 
+          {/* Consigner Schedule */}
+          <ConsignerScheduleSection />
+
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Cards by Brand */}
@@ -141,7 +396,7 @@ export default function Dashboard() {
                         <span className="text-gray-500">{formatNumber(count)}</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-blue-500 rounded-full"
                           style={{ width: `${percentage}%` }}
                         />
@@ -169,7 +424,7 @@ export default function Dashboard() {
                         <span className="text-gray-500">{formatCurrency(revenue)}</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-green-500 rounded-full"
                           style={{ width: `${percentage}%` }}
                         />
@@ -237,7 +492,7 @@ export default function Dashboard() {
                   const height = (count / maxCount) * 100;
                   return (
                     <div key={year} className="flex-1 flex flex-col items-center gap-1">
-                      <div 
+                      <div
                         className="w-full bg-blue-500 rounded-t transition-all hover:bg-blue-600"
                         style={{ height: `${height}%`, minHeight: '4px' }}
                         title={`${year}: ${formatNumber(count)} cards`}
