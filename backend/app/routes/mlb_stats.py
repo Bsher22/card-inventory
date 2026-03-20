@@ -229,68 +229,77 @@ async def get_schedule_with_inventory(
 
     For each game, shows both rosters with inventory match info.
     """
-    # Get the schedule
-    games = await get_schedule(
-        team_id=team_id,
-        start_date=start_date,
-        end_date=end_date,
-        season=season,
-    )
+    import traceback
 
-    if not games:
-        return []
-
-    # Collect unique team IDs to fetch rosters
-    team_ids = set()
-    for g in games:
-        team_ids.add(g.home_team_id)
-        team_ids.add(g.away_team_id)
-
-    # Fetch all rosters
-    rosters: dict[int, list[RosterPlayer]] = {}
-    for tid in team_ids:
-        rosters[tid] = await get_roster(team_id=tid, season=season)
-
-    # Collect all player names from all rosters for batch inventory lookup
-    all_player_names = set()
-    for roster in rosters.values():
-        for p in roster:
-            all_player_names.add(p.full_name)
-
-    # Batch inventory lookup: find all players we have inventory for
-    inventory_by_name = await _batch_inventory_lookup(db, list(all_player_names))
-
-    # Build prospect ranking lookups for all teams in the schedule
-    team_rank_by_name, overall_rank_by_name = await _build_prospect_lookups(team_ids, season)
-
-    # Build response
-    result = []
-    for g in games:
-        home_roster = rosters.get(g.home_team_id, [])
-        away_roster = rosters.get(g.away_team_id, [])
-
-        home_matches = _match_roster_to_inventory(
-            home_roster, inventory_by_name, team_rank_by_name, overall_rank_by_name
-        )
-        away_matches = _match_roster_to_inventory(
-            away_roster, inventory_by_name, team_rank_by_name, overall_rank_by_name
+    try:
+        # Get the schedule
+        games = await get_schedule(
+            team_id=team_id,
+            start_date=start_date,
+            end_date=end_date,
+            season=season,
         )
 
-        result.append(GameWithInventory(
-            date=g.date,
-            game_pk=g.game_pk,
-            home_team=g.home_team,
-            home_team_id=g.home_team_id,
-            away_team=g.away_team,
-            away_team_id=g.away_team_id,
-            venue=g.venue,
-            home_roster=home_matches,
-            away_roster=away_matches,
-            home_players_in_inventory=sum(1 for m in home_matches if m.has_inventory),
-            away_players_in_inventory=sum(1 for m in away_matches if m.has_inventory),
-        ))
+        if not games:
+            return []
 
-    return result
+        # Collect unique team IDs to fetch rosters
+        team_ids = set()
+        for g in games:
+            team_ids.add(g.home_team_id)
+            team_ids.add(g.away_team_id)
+
+        # Fetch all rosters
+        rosters: dict[int, list[RosterPlayer]] = {}
+        for tid in team_ids:
+            rosters[tid] = await get_roster(team_id=tid, season=season)
+
+        # Collect all player names from all rosters for batch inventory lookup
+        all_player_names = set()
+        for roster in rosters.values():
+            for p in roster:
+                all_player_names.add(p.full_name)
+
+        # Batch inventory lookup: find all players we have inventory for
+        inventory_by_name = await _batch_inventory_lookup(db, list(all_player_names))
+
+        # Build prospect ranking lookups for all teams in the schedule
+        team_rank_by_name, overall_rank_by_name = await _build_prospect_lookups(team_ids, season)
+
+        # Build response
+        result = []
+        for g in games:
+            home_roster = rosters.get(g.home_team_id, [])
+            away_roster = rosters.get(g.away_team_id, [])
+
+            home_matches = _match_roster_to_inventory(
+                home_roster, inventory_by_name, team_rank_by_name, overall_rank_by_name
+            )
+            away_matches = _match_roster_to_inventory(
+                away_roster, inventory_by_name, team_rank_by_name, overall_rank_by_name
+            )
+
+            result.append(GameWithInventory(
+                date=g.date,
+                game_pk=g.game_pk,
+                home_team=g.home_team,
+                home_team_id=g.home_team_id,
+                away_team=g.away_team,
+                away_team_id=g.away_team_id,
+                venue=g.venue,
+                home_roster=home_matches,
+                away_roster=away_matches,
+                home_players_in_inventory=sum(1 for m in home_matches if m.has_inventory),
+                away_players_in_inventory=sum(1 for m in away_matches if m.has_inventory),
+            ))
+
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR in schedule/inventory-match: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================
