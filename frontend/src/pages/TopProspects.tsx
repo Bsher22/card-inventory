@@ -329,7 +329,7 @@ export default function TopProspects() {
                   # <SortIcon field="rank" />
                 </th>
                 <th
-                  className="text-left px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100"
+                  className="text-left px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 w-48"
                   onClick={() => handleSort('name')}
                 >
                   Player <SortIcon field="name" />
@@ -345,7 +345,7 @@ export default function TopProspects() {
                 <th className="text-left px-4 py-3 font-semibold text-slate-700 w-20">Pos</th>
                 <th className="text-center px-4 py-3 font-semibold text-slate-700 w-16">Age</th>
                 <th
-                  className="text-center px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100 w-32"
+                  className="text-center px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort('inventory_count')}
                 >
                   Inventory <SortIcon field="inventory_count" />

@@ -39,6 +39,7 @@ import Purchases from './pages/Purchases';
 import Sales from './pages/Sales';
 import ChecklistUpload from './pages/ChecklistUpload';
 import Consigners from './pages/Consigners';
+import ConsignerDetail from './pages/ConsignerDetail';
 import Consignments from './pages/Consignments';
 import GradingSubmissions from './pages/GradingSubmissions';
 import AuthenticationPage from './pages/AuthenticationPage';
@@ -244,6 +245,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Consigners />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/consigners/:id"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ConsignerDetail />
                   </AppLayout>
                 </ProtectedRoute>
               }

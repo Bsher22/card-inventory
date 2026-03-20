@@ -7,6 +7,7 @@ import {
   DollarSign,
   Users,
   BarChart3,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Calendar,
@@ -93,6 +94,7 @@ const CONSIGNER_COLORS = [
 ];
 
 function ConsignerScheduleSection() {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -203,49 +205,73 @@ function ConsignerScheduleSection() {
 
   const hasHomeTeams = uniqueTeamIds.length > 0;
 
+  const totalGames = useMemo(() => {
+    let count = 0;
+    for (const games of gamesByDate.values()) count += games.length;
+    return count;
+  }, [gamesByDate]);
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-      {/* Header with month nav */}
-      <div className="flex items-center justify-between mb-5">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+      {/* Clickable header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors rounded-xl"
+      >
         <div className="flex items-center gap-2">
           <Calendar className="text-emerald-600" size={20} />
           <h3 className="text-lg font-semibold text-gray-900">Consigner Schedule</h3>
+          {!isExpanded && hasHomeTeams && !loadingSchedule && (
+            <span className="text-sm text-gray-500 ml-2">
+              {totalGames} game{totalGames !== 1 ? 's' : ''} in {monthLabel}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={prevMonth}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <ChevronLeft size={18} className="text-gray-600" />
-          </button>
-          <span className="text-sm font-medium text-gray-700 min-w-[140px] text-center">
-            {monthLabel}
-          </span>
-          <button
-            onClick={nextMonth}
-            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <ChevronRight size={18} className="text-gray-600" />
-          </button>
+          {isExpanded && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); prevMonth(); }}
+                className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <ChevronLeft size={18} className="text-gray-600" />
+              </button>
+              <span className="text-sm font-medium text-gray-700 min-w-[140px] text-center">
+                {monthLabel}
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); nextMonth(); }}
+                className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <ChevronRight size={18} className="text-gray-600" />
+              </button>
+            </>
+          )}
+          <ChevronDown
+            size={18}
+            className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          />
         </div>
-      </div>
+      </button>
 
-      {!hasHomeTeams ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
-          No consigner home teams configured. Add home teams to consigners to see their game schedules.
-        </p>
-      ) : loadingSchedule ? (
-        <div className="space-y-3 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-12 bg-gray-100 rounded-lg" />
-          ))}
-        </div>
-      ) : gamesByDate.size === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
-          No games scheduled for {monthLabel}
-        </p>
-      ) : (
-        <div className="space-y-4">
+      {!isExpanded ? null : (
+        <div className="px-6 pb-6">
+          {!hasHomeTeams ? (
+            <p className="text-sm text-gray-500 py-6 text-center">
+              No consigner home teams configured. Add home teams to consigners to see their game schedules.
+            </p>
+          ) : loadingSchedule ? (
+            <div className="space-y-3 animate-pulse">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-12 bg-gray-100 rounded-lg" />
+              ))}
+            </div>
+          ) : gamesByDate.size === 0 ? (
+            <p className="text-sm text-gray-500 py-6 text-center">
+              No games scheduled for {monthLabel}
+            </p>
+          ) : (
+            <div className="space-y-4">
           {[...gamesByDate.entries()].map(([dateStr, games]) => {
             const dateObj = new Date(dateStr + 'T12:00:00');
             const dayLabel = dateObj.toLocaleDateString('en-US', {
@@ -309,6 +335,8 @@ function ConsignerScheduleSection() {
               </div>
             );
           })}
+          </div>
+          )}
         </div>
       )}
     </div>
