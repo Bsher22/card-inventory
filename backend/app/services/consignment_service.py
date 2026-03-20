@@ -96,14 +96,19 @@ class ConsignmentService:
         consigner = await self.db.get(Consigner, consigner_id)
         if not consigner:
             return None
-        
+
         for field, value in kwargs.items():
             if hasattr(consigner, field) and value is not None:
                 setattr(consigner, field, value)
-        
+
         await self.db.flush()
-        await self.db.refresh(consigner)
-        return consigner
+        # Re-fetch with eager loading so home_teams are available for response serialization
+        result = await self.db.execute(
+            select(Consigner)
+            .options(selectinload(Consigner.home_teams))
+            .where(Consigner.id == consigner_id)
+        )
+        return result.scalar_one_or_none()
     
     async def set_consigner_home_teams(
         self,
