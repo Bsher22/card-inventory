@@ -65,10 +65,16 @@ class ConsignmentService:
         name: str,
         email: Optional[str] = None,
         phone: Optional[str] = None,
+        street_address: Optional[str] = None,
+        city: Optional[str] = None,
+        state: Optional[str] = None,
+        postal_code: Optional[str] = None,
+        country: Optional[str] = "USA",
         location: Optional[str] = None,
         default_fee: Optional[Decimal] = None,
         payment_method: Optional[str] = None,
         payment_details: Optional[str] = None,
+        is_active: bool = True,
         notes: Optional[str] = None,
     ) -> Consigner:
         """Create a new consigner."""
@@ -76,10 +82,16 @@ class ConsignmentService:
             name=name,
             email=email,
             phone=phone,
+            street_address=street_address,
+            city=city,
+            state=state,
+            postal_code=postal_code,
+            country=country,
             location=location,
             default_fee=default_fee,
             payment_method=payment_method,
             payment_details=payment_details,
+            is_active=is_active,
             notes=notes,
         )
         self.db.add(consigner)
