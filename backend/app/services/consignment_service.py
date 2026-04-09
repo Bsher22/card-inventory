@@ -96,8 +96,13 @@ class ConsignmentService:
         )
         self.db.add(consigner)
         await self.db.flush()
-        await self.db.refresh(consigner)
-        return consigner
+        # Re-fetch with eager loading so home_teams are available for response serialization
+        result = await self.db.execute(
+            select(Consigner)
+            .options(selectinload(Consigner.home_teams))
+            .where(Consigner.id == consigner.id)
+        )
+        return result.scalar_one()
     
     async def update_consigner(
         self,
