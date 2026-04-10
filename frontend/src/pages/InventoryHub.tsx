@@ -40,6 +40,16 @@ const cards: HubCard[] = [
     route: '/inventory',
   },
   {
+    icon: Upload,
+    iconColor: 'text-cyan-600',
+    iconBg: 'bg-cyan-50',
+    title: 'Upload Inventory',
+    description: 'Bulk-import cards from a CSV or Excel spreadsheet. Auto-matches rows to existing checklists and adds to inventory.',
+    tags: ['Spreadsheet', 'Bulk Import', 'CSV'],
+    route: '/inventory-upload',
+    actionButton: { label: 'Upload Now', route: '/inventory-upload' },
+  },
+  {
     icon: Trophy,
     iconColor: 'text-amber-600',
     iconBg: 'bg-amber-50',

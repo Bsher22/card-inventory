@@ -49,6 +49,7 @@ import Submitters from './pages/Submitters';
 import MilbSchedule from './pages/MilbSchedule';
 import TopProspects from './pages/TopProspects';
 import InventoryHub from './pages/InventoryHub';
+import InventoryUpload from './pages/InventoryUpload';
 import ConsignmentsHub from './pages/ConsignmentsHub';
 import ScoutingHub from './pages/ScoutingHub';
 import ServicesHub from './pages/ServicesHub';
@@ -225,6 +226,16 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Inventory />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory-upload"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <InventoryUpload />
                   </AppLayout>
                 </ProtectedRoute>
               }
