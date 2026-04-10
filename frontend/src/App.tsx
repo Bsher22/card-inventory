@@ -21,7 +21,6 @@ import {
   Boxes,
   Compass,
   Wrench,
-  TrendingUp,
 } from 'lucide-react';
 
 // Auth
@@ -53,7 +52,6 @@ import InventoryUpload from './pages/InventoryUpload';
 import ConsignmentsHub from './pages/ConsignmentsHub';
 import ScoutingHub from './pages/ScoutingHub';
 import ServicesHub from './pages/ServicesHub';
-import CommerceHub from './pages/CommerceHub';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,7 +68,6 @@ const navItems = [
   { to: '/consignments-hub', icon: Send, label: 'Consignments' },
   { to: '/scouting', icon: Compass, label: 'Scouting' },
   { to: '/services', icon: Wrench, label: 'Services' },
-  { to: '/commerce', icon: TrendingUp, label: 'Commerce' },
 ];
 
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -174,16 +171,6 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <ServicesHub />
-                  </AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commerce"
-              element={
-                <ProtectedRoute>
-                  <AppLayout>
-                    <CommerceHub />
                   </AppLayout>
                 </ProtectedRoute>
               }
