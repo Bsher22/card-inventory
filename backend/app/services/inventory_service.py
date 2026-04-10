@@ -112,7 +112,7 @@ class InventoryService:
         query = select(Inventory).where(Inventory.checklist_id == checklist_id)
 
         if condition:
-            query = query.where(Inventory.condition == condition)
+            query = query.where(Inventory.raw_condition == condition)
 
         result = await self.db.execute(query)
         return result.scalars().all()
@@ -124,7 +124,7 @@ class InventoryService:
             select(Inventory).where(
                 and_(
                     Inventory.checklist_id == data.checklist_id,
-                    Inventory.condition == data.condition,
+                    Inventory.raw_condition == data.raw_condition,
                     Inventory.grade_company == data.grade_company,
                     Inventory.grade_value == data.grade_value,
                 )
@@ -177,7 +177,7 @@ class InventoryService:
         self,
         checklist_id: UUID,
         quantity: int,
-        condition: str = "NM",
+        raw_condition: str = "NM",
         grade_company: Optional[str] = None,
         grade_value: Optional[Decimal] = None,
     ) -> Inventory:
@@ -189,7 +189,7 @@ class InventoryService:
         query = select(Inventory).where(
             and_(
                 Inventory.checklist_id == checklist_id,
-                Inventory.condition == condition,
+                Inventory.raw_condition == raw_condition,
                 Inventory.grade_company == grade_company,
                 Inventory.grade_value == grade_value,
             )
@@ -205,7 +205,7 @@ class InventoryService:
             new_inventory = Inventory(
                 checklist_id=checklist_id,
                 quantity=quantity,
-                condition=condition,
+                raw_condition=raw_condition,
                 grade_company=grade_company,
                 grade_value=grade_value,
             )
@@ -217,7 +217,7 @@ class InventoryService:
         self,
         checklist_id: UUID,
         quantity: int,
-        condition: str = "NM",
+        raw_condition: str = "NM",
         grade_company: Optional[str] = None,
         grade_value: Optional[Decimal] = None,
     ) -> Optional[Inventory]:
@@ -225,7 +225,7 @@ class InventoryService:
         query = select(Inventory).where(
             and_(
                 Inventory.checklist_id == checklist_id,
-                Inventory.condition == condition,
+                Inventory.raw_condition == raw_condition,
                 Inventory.grade_company == grade_company,
                 Inventory.grade_value == grade_value,
             )

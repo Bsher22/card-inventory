@@ -154,7 +154,7 @@ from decimal import Decimal
 class BulkInventoryItem(BaseModel):
     checklist_id: UUID
     quantity: int
-    condition: str = "NM"
+    raw_condition: str = "NM"
     grade_company: Optional[str] = None
     grade_value: Optional[Decimal] = None
 
@@ -183,7 +183,7 @@ async def bulk_add_inventory(
             await service.add_to_inventory(
                 checklist_id=item.checklist_id,
                 quantity=item.quantity,
-                condition=item.condition,
+                raw_condition=item.raw_condition,
                 grade_company=item.grade_company,
                 grade_value=item.grade_value,
             )

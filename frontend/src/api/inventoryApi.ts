@@ -68,7 +68,7 @@ export async function adjustInventory(id: string, adjustment: number): Promise<I
 export async function bulkAddInventory(items: {
   checklist_id: string;
   quantity: number;
-  condition?: string;
+  raw_condition?: string;
 }[]): Promise<BulkInventoryResult> {
   return apiRequest<BulkInventoryResult>('/inventory/bulk', {
     method: 'POST',

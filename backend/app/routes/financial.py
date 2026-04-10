@@ -156,16 +156,14 @@ async def create_inventory_entry(
         id=uuid4(),
         checklist_id=checklist.id,
         quantity=item.quantity,
-        raw_quantity=item.quantity if not item.is_slabbed else 0,
-        slabbed_quantity=item.quantity if item.is_slabbed else 0,
-        parallel=item.parallel if item.parallel and item.parallel != "Base" else None,
         is_signed=item.is_signed,
         is_slabbed=item.is_slabbed,
         grade_company=item.grade_company,
         grade_value=item.grade_value,
+        raw_condition=item.condition or "NM",
         total_cost=cost_per_card * item.quantity,
-        per_unit_cost=cost_per_card,
-        source="purchase",
+        card_cost=cost_per_card * item.quantity,
+        how_obtained="purchase",
     )
     db.add(inventory)
     await db.flush()
