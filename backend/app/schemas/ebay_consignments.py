@@ -2,12 +2,28 @@
 Pydantic schemas for eBay Consignments.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _coerce_to_datetime(v: Any) -> Any:
+    """Accept either a datetime, a date, or a YYYY-MM-DD string and normalise
+    to a tz-aware datetime at midnight UTC.  Lets HTML <input type=date>
+    values flow into datetime fields without the client having to append
+    T00:00:00."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, datetime):
+        return v
+    if isinstance(v, date):
+        return datetime.combine(v, time.min, tzinfo=timezone.utc)
+    if isinstance(v, str) and len(v) == 10 and v[4] == "-" and v[7] == "-":
+        return datetime.combine(date.fromisoformat(v), time.min, tzinfo=timezone.utc)
+    return v
 
 
 # ============================================================
@@ -98,6 +114,11 @@ class EbayConsignmentItemUpdate(BaseModel):
     listed_at: Optional[datetime] = None
     notes: Optional[str] = None
 
+    @field_validator("listed_at", mode="before")
+    @classmethod
+    def _coerce_listed_at(cls, v: Any) -> Any:
+        return _coerce_to_datetime(v)
+
 
 class EbayItemSaleInput(BaseModel):
     """Record a sale for an item."""
@@ -108,6 +129,11 @@ class EbayItemSaleInput(BaseModel):
     shipping_cost: Decimal = Decimal("0")
     buyer_info: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("sold_at", mode="before")
+    @classmethod
+    def _coerce_sold_at(cls, v: Any) -> Any:
+        return _coerce_to_datetime(v)
 
 
 class EbayConsignmentItemResponse(EbayConsignmentItemBase):
@@ -162,6 +188,11 @@ class EbayConsignmentAgreementUpdate(BaseModel):
     idgas_signed_at: Optional[datetime] = None
     notes: Optional[str] = None
 
+    @field_validator("client_signed_at", "idgas_signed_at", mode="before")
+    @classmethod
+    def _coerce_signed_at(cls, v: Any) -> Any:
+        return _coerce_to_datetime(v)
+
 
 class EbayConsignmentAgreementResponse(EbayConsignmentAgreementBase):
     id: UUID
@@ -197,6 +228,11 @@ class EbayPayoutMarkPaid(BaseModel):
     paid_at: Optional[datetime] = None
     paid_method: Optional[str] = None
     paid_reference: Optional[str] = None
+
+    @field_validator("paid_at", mode="before")
+    @classmethod
+    def _coerce_paid_at(cls, v: Any) -> Any:
+        return _coerce_to_datetime(v)
 
 
 class EbayPayoutResponse(BaseModel):

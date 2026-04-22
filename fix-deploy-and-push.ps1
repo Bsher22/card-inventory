@@ -103,6 +103,8 @@ $files = @(
     "backend/app/schemas/ebay_consignments.py",
     "backend/app/services/ebay_consignment_service.py",
     "backend/app/services/ebay_consignment_pdf.py",
+    "backend/app/services/ebay_consignment_migrations.py",
+    "backend/scripts/smoke_ebay_consignments.py",
     "backend/app/routes/ebay_consignments.py",
     "backend/app/main.py",
     "backend/app/assets/idgas_logo.png",

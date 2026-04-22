@@ -56,6 +56,16 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
     print(f"Starting {settings.app_name}...")
+    # Ensure the eBay Consignments schema is in place (idempotent).
+    # Failure is logged but does NOT block startup - operator can apply
+    # the migration manually if this fails.
+    try:
+        from app.services.ebay_consignment_migrations import (
+            ensure_ebay_consignment_schema,
+        )
+        ensure_ebay_consignment_schema()
+    except Exception as exc:
+        print(f"[warn] ebay-consignments auto-migrate raised: {exc}")
     yield
     # Shutdown
     print(f"Shutting down {settings.app_name}...")

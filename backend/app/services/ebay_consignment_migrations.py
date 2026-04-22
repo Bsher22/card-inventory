@@ -1,0 +1,76 @@
+"""
+Idempotent runner for the eBay Consignments SQL migration.
+
+Called from the FastAPI lifespan so deployments don't have to remember to
+manually `psql -f` the migration file.  The migration itself uses
+`CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`, and
+`DROP TRIGGER IF EXISTS / CREATE TRIGGER` patterns, so it is safe to execute
+on every cold start.
+
+To opt out, set environment variable EBAY_CONSIGNMENTS_AUTO_MIGRATE=false.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from pathlib import Path
+
+from sqlalchemy import inspect, text
+
+from app.database import sync_engine
+
+logger = logging.getLogger(__name__)
+
+MIGRATION_PATH = (
+    Path(__file__).resolve().parents[2] / "migrations" / "add_ebay_consignments.sql"
+)
+
+REQUIRED_TABLES = {
+    "ebay_consigners",
+    "ebay_consignment_agreements",
+    "ebay_consignment_items",
+    "ebay_consignment_payouts",
+}
+
+
+def _all_tables_present() -> bool:
+    try:
+        existing = set(inspect(sync_engine).get_table_names())
+    except Exception as exc:  # pragma: no cover - DB unreachable
+        logger.warning("ebay-consignments: cannot list tables (%s)", exc)
+        return False
+    return REQUIRED_TABLES.issubset(existing)
+
+
+def ensure_ebay_consignment_schema() -> bool:
+    """Apply the eBay consignments migration if needed.
+
+    Returns True if the schema is in place after this call (whether we ran the
+    migration or it was already applied), False if we couldn't apply it.
+    """
+    if os.environ.get("EBAY_CONSIGNMENTS_AUTO_MIGRATE", "true").lower() == "false":
+        logger.info("ebay-consignments: auto-migrate disabled via env")
+        return _all_tables_present()
+
+    if _all_tables_present():
+        logger.debug("ebay-consignments: tables already present")
+        return True
+
+    if not MIGRATION_PATH.exists():
+        logger.error("ebay-consignments: migration file not found at %s", MIGRATION_PATH)
+        return False
+
+    sql = MIGRATION_PATH.read_text(encoding="utf-8")
+    logger.info("ebay-consignments: applying migration from %s", MIGRATION_PATH)
+    try:
+        # Use a raw DBAPI connection so the multi-statement script (with $$
+        # plpgsql function bodies) executes verbatim instead of being split
+        # by SQLAlchemy's statement parser.
+        with sync_engine.begin() as conn:
+            conn.exec_driver_sql(sql)
+        logger.info("ebay-consignments: migration applied successfully")
+        return True
+    except Exception as exc:
+        logger.exception("ebay-consignments: migration failed: %s", exc)
+        return False
