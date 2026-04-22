@@ -31,6 +31,7 @@ from app.schemas.ebay_consignments import (
     EbayConsignmentItemCreate,
     EbayConsignmentItemResponse,
     EbayConsignmentItemUpdate,
+    EbayConsignmentItemWithContext,
     EbayItemSaleInput,
     EbayPayoutGenerateRequest,
     EbayPayoutMarkPaid,
@@ -206,6 +207,40 @@ async def download_agreement_pdf(agreement_id: UUID, db: AsyncSession = Depends(
 # ==============================================================
 # ITEMS (nested under agreement)
 # ==============================================================
+
+@router.get("/ebay-consignment-items", response_model=list[EbayConsignmentItemWithContext])
+async def list_ebay_items(
+    consigner_id: Optional[UUID] = Query(None),
+    agreement_id: Optional[UUID] = Query(None),
+    status: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, description="Substring match on item title"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+):
+    """List consignment items across all agreements - the inventory view."""
+    svc = EbayConsignmentService(db)
+    rows = await svc.list_items(
+        consigner_id=consigner_id,
+        agreement_id=agreement_id,
+        status=status,
+        search=search,
+        skip=skip,
+        limit=limit,
+    )
+    out: list[EbayConsignmentItemWithContext] = []
+    for it in rows:
+        resp = EbayConsignmentItemWithContext.model_validate(it)
+        if it.agreement is not None:
+            resp.agreement_number = it.agreement.agreement_number
+            resp.agreement_status = it.agreement.status
+            resp.fee_percent = it.agreement.fee_percent
+            if it.agreement.consigner is not None:
+                resp.consigner_id = it.agreement.consigner.id
+                resp.consigner_name = it.agreement.consigner.name
+        out.append(resp)
+    return out
+
 
 @router.post("/ebay-consignment-agreements/{agreement_id}/items",
              response_model=EbayConsignmentItemResponse, status_code=201)

@@ -53,7 +53,9 @@ import ConsignmentsHub from './pages/ConsignmentsHub';
 import EbayConsigners from './pages/EbayConsigners';
 import EbayConsignments from './pages/EbayConsignments';
 import EbayConsignmentDetail from './pages/EbayConsignmentDetail';
+import EbayConsignmentInventory from './pages/EbayConsignmentInventory';
 import EbayPayouts from './pages/EbayPayouts';
+import EbayHub from './pages/EbayHub';
 import ScoutingHub from './pages/ScoutingHub';
 import ServicesHub from './pages/ServicesHub';
 
@@ -70,7 +72,7 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/inventory-hub', icon: Boxes, label: 'Inventory' },
   { to: '/consignments-hub', icon: Send, label: 'Consignments' },
-  { to: '/ebay-consignments', icon: Store, label: 'eBay Consign' },
+  { to: '/ebay-hub', icon: Store, label: 'eBay Consign' },
   { to: '/scouting', icon: Compass, label: 'Scouting' },
   { to: '/services', icon: Wrench, label: 'Services' },
 ];
@@ -343,6 +345,26 @@ function App() {
               }
             />
             {/* eBay Consignments (3rd-party consignment selling) */}
+            <Route
+              path="/ebay-hub"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EbayHub />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ebay-inventory"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EbayConsignmentInventory />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/ebay-consigners"
               element={

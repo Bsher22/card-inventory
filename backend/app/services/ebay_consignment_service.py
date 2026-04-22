@@ -265,6 +265,42 @@ class EbayConsignmentService:
         await self.db.refresh(item)
         return item
 
+    async def list_items(
+        self,
+        consigner_id: Optional[UUID] = None,
+        agreement_id: Optional[UUID] = None,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> Sequence[EbayConsignmentItem]:
+        """List items across all agreements with optional filters.
+
+        Items are returned with their parent agreement and consigner eager-loaded
+        so the API can flatten consigner_name and agreement_number into the
+        response without an extra round-trip per row.
+        """
+        stmt = (
+            select(EbayConsignmentItem)
+            .options(
+                selectinload(EbayConsignmentItem.agreement)
+                .selectinload(EbayConsignmentAgreement.consigner)
+            )
+            .join(EbayConsignmentAgreement, EbayConsignmentAgreement.id == EbayConsignmentItem.agreement_id)
+        )
+        if consigner_id:
+            stmt = stmt.where(EbayConsignmentAgreement.consigner_id == consigner_id)
+        if agreement_id:
+            stmt = stmt.where(EbayConsignmentItem.agreement_id == agreement_id)
+        if status:
+            stmt = stmt.where(EbayConsignmentItem.status == status)
+        if search:
+            like = f"%{search}%"
+            stmt = stmt.where(EbayConsignmentItem.title.ilike(like))
+        stmt = stmt.order_by(EbayConsignmentItem.created_at.desc()).offset(skip).limit(limit)
+        res = await self.db.execute(stmt)
+        return res.scalars().all()
+
     async def update_item(self, item_id: UUID, **fields) -> Optional[EbayConsignmentItem]:
         res = await self.db.execute(select(EbayConsignmentItem).where(EbayConsignmentItem.id == item_id))
         item = res.scalar_one_or_none()

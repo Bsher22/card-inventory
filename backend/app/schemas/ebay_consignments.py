@@ -128,6 +128,15 @@ class EbayConsignmentItemResponse(EbayConsignmentItemBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EbayConsignmentItemWithContext(EbayConsignmentItemResponse):
+    """Item enriched with parent agreement + consigner context for list views."""
+    agreement_number: Optional[str] = None
+    agreement_status: Optional[str] = None
+    fee_percent: Optional[Decimal] = None
+    consigner_id: Optional[UUID] = None
+    consigner_name: Optional[str] = None
+
+
 # ============================================================
 # AGREEMENTS
 # ============================================================

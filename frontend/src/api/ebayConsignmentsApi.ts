@@ -95,6 +95,14 @@ export interface EbayConsignmentItem {
   updated_at: string;
 }
 
+export interface EbayConsignmentItemWithContext extends EbayConsignmentItem {
+  agreement_number: string | null;
+  agreement_status: string | null;
+  fee_percent: string | null;
+  consigner_id: string | null;
+  consigner_name: string | null;
+}
+
 export interface EbayConsignmentItemCreate {
   title: string;
   description?: string | null;
@@ -302,6 +310,18 @@ export const downloadAgreementPdf = async (id: string): Promise<Blob> => {
 // Item endpoints
 // ============================================
 
+export const listEbayItems = (params?: {
+  consigner_id?: string;
+  agreement_id?: string;
+  status?: string;
+  search?: string;
+  skip?: number;
+  limit?: number;
+}) =>
+  apiRequest<EbayConsignmentItemWithContext[]>(
+    `/ebay-consignment-items${buildQueryString(params || {})}`,
+  );
+
 export const addEbayItem = (agreementId: string, data: EbayConsignmentItemCreate) =>
   apiRequest<EbayConsignmentItem>(
     `/ebay-consignment-agreements/${agreementId}/items`,
@@ -394,6 +414,7 @@ export const ebayConsignmentsApi = {
   signAgreement: signEbayAgreement,
   downloadAgreementPdf,
   // Items
+  listItems: listEbayItems,
   addItem: addEbayItem,
   updateItem: updateEbayItem,
   deleteItem: deleteEbayItem,
