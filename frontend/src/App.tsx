@@ -70,6 +70,7 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/inventory-hub', icon: Boxes, label: 'Inventory' },
   { to: '/consignments-hub', icon: Send, label: 'Consignments' },
+  { to: '/ebay-consignments', icon: Store, label: 'eBay Consign' },
   { to: '/scouting', icon: Compass, label: 'Scouting' },
   { to: '/services', icon: Wrench, label: 'Services' },
 ];
