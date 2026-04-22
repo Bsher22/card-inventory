@@ -82,3 +82,5 @@ bulk_inventory_import.py
 # Logs
 *.log
 logs/
+
+.claude/worktrees/
