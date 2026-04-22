@@ -11,9 +11,10 @@ Two entry points:
 
 from __future__ import annotations
 
+import os
 from decimal import Decimal
 from io import BytesIO
-from typing import Iterable
+from typing import Iterable, Optional
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -21,7 +22,7 @@ from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
-    PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+    Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
 
@@ -32,6 +33,27 @@ from reportlab.platypus import (
 IDGAS_COMPANY_NAME = "IDGAS LLC"
 IDGAS_ADDRESS = ""
 IDGAS_EMAIL = ""
+
+# Logo lives in app/assets/ — resolved relative to this file so paths work
+# regardless of the cwd the app is launched from.
+_ASSET_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
+LOGO_PATH: Optional[str] = os.path.join(_ASSET_DIR, "idgas_logo.png")
+if not os.path.exists(LOGO_PATH):
+    LOGO_PATH = None
+
+
+def _logo_flowable(max_height: float = 0.9 * inch):
+    """Return a reportlab Image sized to the given height, or None if missing."""
+    if not LOGO_PATH:
+        return None
+    img = Image(LOGO_PATH)
+    # Preserve aspect ratio by scaling from intrinsic dimensions
+    iw, ih = img.imageWidth, img.imageHeight
+    if ih > 0:
+        scale = max_height / ih
+        img.drawHeight = max_height
+        img.drawWidth = iw * scale
+    return img
 
 
 def _money(value) -> str:
@@ -46,6 +68,10 @@ def _styles():
         "title": ParagraphStyle(
             "Title", parent=base["Title"], fontSize=18, alignment=TA_CENTER,
             textColor=colors.HexColor("#0f172a"), spaceAfter=12,
+        ),
+        "title_right": ParagraphStyle(
+            "TitleRight", parent=base["Title"], fontSize=18, alignment=2,
+            textColor=colors.HexColor("#0f172a"), spaceAfter=0,
         ),
         "h2": ParagraphStyle(
             "H2", parent=base["Heading2"], fontSize=12, textColor=colors.HexColor("#0f172a"),
@@ -110,8 +136,28 @@ def build_agreement_pdf(agreement, consigner) -> bytes:
     )
     story = []
 
-    # --- Header ---
-    story.append(Paragraph("eBay Consignment Agreement", styles["title"]))
+    # --- Header: logo + title ---
+    logo = _logo_flowable(max_height=0.9 * inch)
+    if logo is not None:
+        header_row = Table(
+            [[logo, Paragraph("eBay Consignment Agreement", styles["title_right"])]],
+            colWidths=[1.2 * inch, 5.5 * inch],
+        )
+        header_row.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+        story.append(header_row)
+        story.append(Spacer(1, 6))
+        story.append(Table([[""]], colWidths=[6.7 * inch], rowHeights=[2], style=TableStyle([
+            ("LINEABOVE", (0, 0), (-1, 0), 1.5, colors.HexColor("#fbbf24")),
+        ])))
+        story.append(Spacer(1, 10))
+    else:
+        story.append(Paragraph("eBay Consignment Agreement", styles["title"]))
 
     meta_rows = [
         ["Agreement #", agreement.agreement_number or "(pending)"],
@@ -260,7 +306,27 @@ def build_payout_statement_pdf(payout, consigner, items: Iterable) -> bytes:
     )
     story = []
 
-    story.append(Paragraph("Monthly Consignment Statement", styles["title"]))
+    logo = _logo_flowable(max_height=0.8 * inch)
+    if logo is not None:
+        header_row = Table(
+            [[logo, Paragraph("Monthly Consignment Statement", styles["title_right"])]],
+            colWidths=[1.1 * inch, 5.6 * inch],
+        )
+        header_row.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+        story.append(header_row)
+        story.append(Spacer(1, 6))
+        story.append(Table([[""]], colWidths=[6.7 * inch], rowHeights=[2], style=TableStyle([
+            ("LINEABOVE", (0, 0), (-1, 0), 1.5, colors.HexColor("#fbbf24")),
+        ])))
+        story.append(Spacer(1, 8))
+    else:
+        story.append(Paragraph("Monthly Consignment Statement", styles["title"]))
     story.append(Paragraph(
         f"<b>{consigner.name}</b> &nbsp;&nbsp;|&nbsp;&nbsp; "
         f"{MONTH_NAMES[payout.period_month]} {payout.period_year}",
