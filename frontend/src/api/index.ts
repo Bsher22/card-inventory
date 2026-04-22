@@ -67,6 +67,10 @@ export { mlbStatsApi } from './mlbStatsApi';
 export * from './prospectsApi';
 export { prospectsApi } from './prospectsApi';
 
+// eBay Consignments API
+export * from './ebayConsignmentsApi';
+export { ebayConsignmentsApi } from './ebayConsignmentsApi';
+
 // ============================================
 // UNIFIED API OBJECT (Optional)
 // ============================================
@@ -85,6 +89,7 @@ import { ebayApi } from './ebayApi';
 import { consignerPricingApi } from './consignerPricingApi';
 import { mlbStatsApi } from './mlbStatsApi';
 import { prospectsApi } from './prospectsApi';
+import { ebayConsignmentsApi } from './ebayConsignmentsApi';
 
 /**
  * Unified API client with all domain APIs
@@ -109,6 +114,7 @@ export const api = {
   consignerPricing: consignerPricingApi,
   mlbStats: mlbStatsApi,
   prospects: prospectsApi,
+  ebayConsignments: ebayConsignmentsApi,
 };
 
 export default api;

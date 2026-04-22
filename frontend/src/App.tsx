@@ -50,6 +50,10 @@ import TopProspects from './pages/TopProspects';
 import InventoryHub from './pages/InventoryHub';
 import InventoryUpload from './pages/InventoryUpload';
 import ConsignmentsHub from './pages/ConsignmentsHub';
+import EbayConsigners from './pages/EbayConsigners';
+import EbayConsignments from './pages/EbayConsignments';
+import EbayConsignmentDetail from './pages/EbayConsignmentDetail';
+import EbayPayouts from './pages/EbayPayouts';
 import ScoutingHub from './pages/ScoutingHub';
 import ServicesHub from './pages/ServicesHub';
 
@@ -333,6 +337,47 @@ function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Sales />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* eBay Consignments (3rd-party consignment selling) */}
+            <Route
+              path="/ebay-consigners"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EbayConsigners />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ebay-consignments"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EbayConsignments />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ebay-consignments/:id"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EbayConsignmentDetail />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ebay-payouts"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <EbayPayouts />
                   </AppLayout>
                 </ProtectedRoute>
               }

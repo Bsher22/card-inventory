@@ -15,6 +15,7 @@ rapidfuzz==3.6.1  # For fuzzy player name matching
 httpx==0.26.0
 cachetools==5.3.2
 PyMuPDF>=1.24.0
+reportlab>=4.0.0  # PDF generation for consignment agreements & payout statements
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
 bcrypt==4.0.1

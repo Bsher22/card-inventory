@@ -54,6 +54,14 @@ from .card_types import (
 # eBay
 from .ebay import EbayImportBatch, EbayListingSale
 
+# eBay Consignments (selling client items on eBay)
+from .ebay_consignments import (
+    EbayConsigner,
+    EbayConsignmentAgreement,
+    EbayConsignmentItem,
+    EbayConsignmentPayout,
+)
+
 # Authentication
 from .users import User
 
@@ -100,6 +108,11 @@ __all__ = [
     # eBay
     "EbayImportBatch",
     "EbayListingSale",
+    # eBay Consignments
+    "EbayConsigner",
+    "EbayConsignmentAgreement",
+    "EbayConsignmentItem",
+    "EbayConsignmentPayout",
     # Authentication
     "User",
 ]
