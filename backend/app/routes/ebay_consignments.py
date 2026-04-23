@@ -48,6 +48,34 @@ router = APIRouter()
 
 
 # ==============================================================
+# DIAGNOSTICS
+# ==============================================================
+
+@router.get("/ebay-consignment-schema-status")
+async def ebay_consignment_schema_status():
+    """Report whether the eBay-consignments schema is up to date.
+
+    Open `/api/ebay-consignment-schema-status` in a browser to debug
+    after deploy:
+        {"ok": true, ...}     -> schema in place, no manual action needed
+        {"ok": false, ...}    -> migration needs to run; see "missing"
+    """
+    from app.services.ebay_consignment_migrations import (
+        ensure_ebay_consignment_schema, _missing_required_columns,
+    )
+    missing = _missing_required_columns()
+    if missing:
+        # Try to apply the migration on demand so the next call comes back clean
+        ensure_ebay_consignment_schema()
+        missing = _missing_required_columns()
+    return {
+        "ok": not missing,
+        "missing": missing,
+        "auto_migrate_enabled": True,
+    }
+
+
+# ==============================================================
 # CONSIGNERS
 # ==============================================================
 

@@ -5,10 +5,12 @@ FastAPI backend for managing baseball card inventory, checklists,
 purchases, and sales with analytics and authentication.
 """
 
+import traceback
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.routes import (
@@ -87,6 +89,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Global exception handler.
+#
+# Without this, an unhandled exception in a route bubbles past CORSMiddleware
+# to Starlette's ServerErrorMiddleware, which sends a 500 response WITHOUT
+# CORS headers - so the browser shows a confusing CORS error instead of the
+# real server error.  Returning a JSONResponse here keeps the response inside
+# the middleware stack so CORS headers are attached.
+# ---------------------------------------------------------------------------
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    print(f"[unhandled] {request.method} {request.url.path}: {exc!r}", flush=True)
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "error": str(exc),
+            "type": exc.__class__.__name__,
+        },
+    )
 
 # Include routers
 # Auth router FIRST (for /api/auth/* endpoints)
