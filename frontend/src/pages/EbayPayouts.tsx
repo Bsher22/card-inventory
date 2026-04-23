@@ -187,8 +187,8 @@ export default function EbayPayouts() {
                       <Stat label="Items" value={String(preview.data.item_count)} />
                       <Stat label="Gross" value={money(preview.data.total_gross)} />
                       <Stat label="eBay fees" value={money(preview.data.total_ebay_fees)} />
-                      <Stat label="Commission" value={money(preview.data.total_idgas_fee)} />
-                      <Stat label="Net Payout" value={money(preview.data.net_payout)} emphasis />
+                      <Stat label="IDGAS fee" value={money(preview.data.total_idgas_fee)} />
+                      <Stat label="Client Payout" value={money(preview.data.net_payout)} emphasis />
                     </div>
 
                     <div className="overflow-x-auto border border-gray-100 rounded-md">
@@ -250,8 +250,8 @@ export default function EbayPayouts() {
               <th className="text-left px-4 py-3">Client</th>
               <th className="text-right px-4 py-3">Items</th>
               <th className="text-right px-4 py-3">Gross</th>
-              <th className="text-right px-4 py-3">Commission</th>
-              <th className="text-right px-4 py-3">Net Payout</th>
+              <th className="text-right px-4 py-3">IDGAS Fee</th>
+              <th className="text-right px-4 py-3">Client Payout</th>
               <th className="text-center px-4 py-3">Paid</th>
               <th className="text-right px-4 py-3"></th>
             </tr>

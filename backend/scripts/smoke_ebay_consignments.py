@@ -80,7 +80,7 @@ async def main() -> int:
                 state="IL",
                 postal_code="00001",
                 country="USA",
-                default_fee_percent=Decimal("20.00"),
+                default_payout_percent=Decimal("80.00"),  # consigner gets 80%, IDGAS keeps 20%
                 payment_method="Venmo",
                 payment_details="@smoke",
                 is_active=True,
@@ -95,7 +95,7 @@ async def main() -> int:
             agreement = await svc.create_agreement(
                 consigner_id=consigner.id,
                 agreement_date=date.today(),
-                fee_percent=Decimal("20.00"),
+                payout_percent=Decimal("80.00"),
                 items=[
                     {
                         "title": "Smoke Item A",

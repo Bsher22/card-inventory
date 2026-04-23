@@ -39,7 +39,7 @@ class EbayConsignerBase(BaseModel):
     state: Optional[str] = None
     postal_code: Optional[str] = None
     country: Optional[str] = "USA"
-    default_fee_percent: Optional[Decimal] = None
+    default_payout_percent: Optional[Decimal] = None
     payment_method: Optional[str] = None
     payment_details: Optional[str] = None
     is_active: bool = True
@@ -59,7 +59,7 @@ class EbayConsignerUpdate(BaseModel):
     state: Optional[str] = None
     postal_code: Optional[str] = None
     country: Optional[str] = None
-    default_fee_percent: Optional[Decimal] = None
+    default_payout_percent: Optional[Decimal] = None
     payment_method: Optional[str] = None
     payment_details: Optional[str] = None
     is_active: Optional[bool] = None
@@ -158,7 +158,7 @@ class EbayConsignmentItemWithContext(EbayConsignmentItemResponse):
     """Item enriched with parent agreement + consigner context for list views."""
     agreement_number: Optional[str] = None
     agreement_status: Optional[str] = None
-    fee_percent: Optional[Decimal] = None
+    payout_percent: Optional[Decimal] = None
     consigner_id: Optional[UUID] = None
     consigner_name: Optional[str] = None
 
@@ -170,7 +170,8 @@ class EbayConsignmentItemWithContext(EbayConsignmentItemResponse):
 class EbayConsignmentAgreementBase(BaseModel):
     consigner_id: UUID
     agreement_date: date
-    fee_percent: Decimal = Field(..., ge=0, le=100)
+    payout_percent: Decimal = Field(..., ge=0, le=100,
+        description="% of each sale price the consigner receives (before pass-through fees)")
     notes: Optional[str] = None
 
 
@@ -180,7 +181,7 @@ class EbayConsignmentAgreementCreate(EbayConsignmentAgreementBase):
 
 class EbayConsignmentAgreementUpdate(BaseModel):
     agreement_date: Optional[date] = None
-    fee_percent: Optional[Decimal] = None
+    payout_percent: Optional[Decimal] = None
     status: Optional[str] = None
     client_signature_name: Optional[str] = None
     client_signed_at: Optional[datetime] = None

@@ -97,8 +97,11 @@ export default function EbayConsignmentDetail() {
           </h1>
           <p className="text-gray-500 mt-1">
             {agreement.consigner_name ?? 'Client'} &nbsp;·&nbsp; Agreement date{' '}
-            {agreement.agreement_date} &nbsp;·&nbsp; Commission{' '}
-            <strong>{agreement.fee_percent}%</strong>
+            {agreement.agreement_date} &nbsp;·&nbsp; Consigner payout{' '}
+            <strong>{agreement.payout_percent}%</strong>
+            <span className="text-gray-400">
+              {' '}(IDGAS keeps {(100 - Number(agreement.payout_percent)).toFixed(2)}%)
+            </span>
           </p>
         </div>
         <div className="flex gap-2">

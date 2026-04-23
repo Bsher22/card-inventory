@@ -100,14 +100,14 @@ class EbayConsignmentService:
         listed = by_status.get("listed", {"count": 0})
         pending = by_status.get("pending", {"count": 0})
 
-        # Lifetime IDGAS fees — best computed from the agreement-level fee_percent
-        # applied to each sold item.  One SQL round-trip.
+        # Lifetime IDGAS commission - the share IDGAS keeps, computed as
+        # (100 - payout_percent)% of each sold item.  One SQL round-trip.
         idgas_fee_stmt = (
             select(
                 func.coalesce(
                     func.sum(
                         EbayConsignmentItem.sold_price
-                        * EbayConsignmentAgreement.fee_percent
+                        * (100 - EbayConsignmentAgreement.payout_percent)
                         / 100
                     ),
                     0,
@@ -184,14 +184,14 @@ class EbayConsignmentService:
         self,
         consigner_id: UUID,
         agreement_date,
-        fee_percent: Decimal,
+        payout_percent: Decimal,
         items: Optional[list[dict]] = None,
         notes: Optional[str] = None,
     ) -> EbayConsignmentAgreement:
         agreement = EbayConsignmentAgreement(
             consigner_id=consigner_id,
             agreement_date=agreement_date,
-            fee_percent=fee_percent,
+            payout_percent=payout_percent,
             notes=notes,
             status="draft",
         )
@@ -397,9 +397,10 @@ class EbayConsignmentService:
         other_fees = Decimal(0)
         for it in items:
             price = Decimal(it.sold_price or 0)
-            fee_pct = Decimal(it.agreement.fee_percent) if it.agreement else Decimal(0)
+            payout_pct = Decimal(it.agreement.payout_percent) if it.agreement else Decimal(100)
+            commission_pct = Decimal(100) - payout_pct
             gross += price
-            idgas_fee += (price * fee_pct / Decimal(100)).quantize(Decimal("0.01"))
+            idgas_fee += (price * commission_pct / Decimal(100)).quantize(Decimal("0.01"))
             ebay_fees_total += Decimal(it.ebay_fees or 0)
             other_fees += Decimal(it.payment_fees or 0) + Decimal(it.shipping_cost or 0)
         net_payout = gross - idgas_fee - ebay_fees_total - other_fees

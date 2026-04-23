@@ -31,8 +31,9 @@ CREATE TABLE IF NOT EXISTS ebay_consigners (
     postal_code      VARCHAR(20),
     country          VARCHAR(100) DEFAULT 'USA',
 
-    -- Default fee percent used to pre-fill new agreements (e.g. 20.00)
-    default_fee_percent NUMERIC(5,2),
+    -- Default consigner payout percent used to pre-fill new agreements
+    -- (e.g. 80.00 means consigner receives 80% of each sale)
+    default_payout_percent NUMERIC(5,2),
 
     -- How client gets paid
     payment_method   VARCHAR(100),   -- 'Check', 'Venmo', 'PayPal', 'Zelle', 'ACH'
@@ -66,8 +67,10 @@ CREATE TABLE IF NOT EXISTS ebay_consignment_agreements (
     status                VARCHAR(20) NOT NULL DEFAULT 'draft',
     -- draft | sent | signed | active | completed | cancelled
 
-    -- Fee model: flat percentage of each item's sale price
-    fee_percent           NUMERIC(5,2) NOT NULL,
+    -- Payout model: percentage of each item's sale price the consigner
+    -- receives (before pass-through eBay/payment/shipping fees).  IDGAS
+    -- keeps (100 - payout_percent)% as commission.
+    payout_percent        NUMERIC(5,2) NOT NULL,
 
     -- Signature tracking (local only - DocuSign fields below reserved for future)
     client_signature_name VARCHAR(200),
@@ -88,10 +91,50 @@ CREATE TABLE IF NOT EXISTS ebay_consignment_agreements (
     CONSTRAINT ebay_agreements_status_check CHECK (
         status IN ('draft','sent','signed','active','completed','cancelled')
     ),
-    CONSTRAINT ebay_agreements_fee_check CHECK (
-        fee_percent >= 0 AND fee_percent <= 100
+    CONSTRAINT ebay_agreements_payout_check CHECK (
+        payout_percent >= 0 AND payout_percent <= 100
     )
 );
+
+-- Backwards-compatible rename for installs that ran an earlier version
+-- of this migration (which stored an IDGAS commission % under fee_percent).
+-- Flip the value so 20% commission becomes 80% consigner payout.
+DO $$
+BEGIN
+    -- Agreement-level rate
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ebay_consignment_agreements'
+          AND column_name = 'fee_percent'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ebay_consignment_agreements'
+          AND column_name = 'payout_percent'
+    ) THEN
+        ALTER TABLE ebay_consignment_agreements DROP CONSTRAINT IF EXISTS ebay_agreements_fee_check;
+        ALTER TABLE ebay_consignment_agreements RENAME COLUMN fee_percent TO payout_percent;
+        UPDATE ebay_consignment_agreements SET payout_percent = 100 - payout_percent;
+        ALTER TABLE ebay_consignment_agreements
+            ADD CONSTRAINT ebay_agreements_payout_check
+            CHECK (payout_percent >= 0 AND payout_percent <= 100);
+    END IF;
+
+    -- Consigner-level default rate
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ebay_consigners'
+          AND column_name = 'default_fee_percent'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ebay_consigners'
+          AND column_name = 'default_payout_percent'
+    ) THEN
+        ALTER TABLE ebay_consigners RENAME COLUMN default_fee_percent TO default_payout_percent;
+        UPDATE ebay_consigners
+           SET default_payout_percent = 100 - default_payout_percent
+         WHERE default_payout_percent IS NOT NULL;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_ebay_agreements_consigner ON ebay_consignment_agreements (consigner_id);
 CREATE INDEX IF NOT EXISTS idx_ebay_agreements_status    ON ebay_consignment_agreements (status);

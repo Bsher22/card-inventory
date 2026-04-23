@@ -100,14 +100,14 @@ sell the items described in Schedule A on eBay.<br/><br/>
 2. <b>Minimum Price.</b> IDGAS will not sell any item for less than its listed
 Minimum Accepted Price without written consent of the Consigner.<br/><br/>
 
-3. <b>Commission.</b> IDGAS shall retain a fee equal to <b>{fee_percent}%</b> of the final
-sale price of each item. Pass-through costs (eBay fees, payment-processor fees,
-shipping) may be deducted from gross proceeds prior to calculating the
-Consigner's payout.<br/><br/>
+3. <b>Payout.</b> The Consigner shall receive <b>{payout_percent}%</b> of the
+final sale price of each item, less pass-through costs (eBay fees,
+payment-processor fees, shipping). IDGAS retains the remaining
+{commission_percent}% as its service fee.<br/><br/>
 
-4. <b>Payout.</b> IDGAS will provide the Consigner with a monthly statement
-itemizing items sold during the preceding calendar month and will remit the
-net payout by the payment method on file.<br/><br/>
+4. <b>Statements.</b> IDGAS will provide the Consigner with a monthly
+statement itemizing items sold during the preceding calendar month and will
+remit the net payout by the payment method on file.<br/><br/>
 
 5. <b>Unsold Items.</b> Items that remain unsold after a commercially reasonable
 period may, at IDGAS's option, be returned to the Consigner or re-listed at
@@ -159,10 +159,12 @@ def build_agreement_pdf(agreement, consigner) -> bytes:
     else:
         story.append(Paragraph("eBay Consignment Agreement", styles["title"]))
 
+    payout_pct = Decimal(agreement.payout_percent)
+    commission_pct = Decimal(100) - payout_pct
     meta_rows = [
         ["Agreement #", agreement.agreement_number or "(pending)"],
         ["Agreement Date", agreement.agreement_date.strftime("%B %d, %Y") if agreement.agreement_date else ""],
-        ["Commission Rate", f"{Decimal(agreement.fee_percent):.2f}%"],
+        ["Consigner Payout", f"{payout_pct:.2f}% of sale price"],
         ["Status", (agreement.status or "draft").title()],
     ]
     meta_tbl = Table(meta_rows, colWidths=[1.4 * inch, 4.5 * inch])
@@ -205,7 +207,8 @@ def build_agreement_pdf(agreement, consigner) -> bytes:
 
     # --- Terms ---
     story.append(Paragraph(AGREEMENT_TERMS.format(
-        fee_percent=f"{Decimal(agreement.fee_percent):.2f}"
+        payout_percent=f"{payout_pct:.2f}",
+        commission_percent=f"{commission_pct:.2f}",
     ), styles["body"]))
     story.append(Spacer(1, 12))
 
@@ -340,8 +343,8 @@ def build_payout_statement_pdf(payout, consigner, items: Iterable) -> bytes:
         ["Gross Sales", _money(payout.total_gross)],
         ["Less eBay Fees", f"({_money(payout.total_ebay_fees)})"],
         ["Less Other Fees (shipping, payment)", f"({_money(payout.total_other_fees)})"],
-        [f"Less IDGAS Commission", f"({_money(payout.total_idgas_fee)})"],
-        ["Net Payout", _money(payout.net_payout)],
+        ["Less IDGAS Service Fee", f"({_money(payout.total_idgas_fee)})"],
+        ["Your Payout", _money(payout.net_payout)],
     ]
     summary = Table(summary_rows, colWidths=[4.5 * inch, 1.7 * inch])
     summary.setStyle(TableStyle([
@@ -425,11 +428,10 @@ def build_payout_statement_pdf(payout, consigner, items: Iterable) -> bytes:
 
 
 def _get_fee_pct(item, payout) -> Decimal:
-    """Fee percent for an item in a payout - falls back to the agreement's rate."""
-    pct = getattr(item, "_fee_percent_snapshot", None)
-    if pct is not None:
-        return Decimal(pct)
+    """IDGAS commission % for an item in a payout, derived from the
+    agreement-level payout%.  Falls back to 0% (full payout) if no agreement
+    is loaded for the item."""
     agr = getattr(item, "agreement", None)
-    if agr is not None and agr.fee_percent is not None:
-        return Decimal(agr.fee_percent)
+    if agr is not None and agr.payout_percent is not None:
+        return Decimal(100) - Decimal(agr.payout_percent)
     return Decimal(0)

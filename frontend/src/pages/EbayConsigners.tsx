@@ -97,9 +97,9 @@ export default function EbayConsigners() {
 
               <div className="mt-4 flex items-center justify-between text-sm">
                 <span className="text-gray-600">
-                  Default fee:{' '}
+                  Default payout:{' '}
                   <strong>
-                    {c.default_fee_percent ? `${c.default_fee_percent}%` : '—'}
+                    {c.default_payout_percent ? `${c.default_payout_percent}%` : '—'}
                   </strong>
                 </span>
                 <span
@@ -162,7 +162,7 @@ function ConsignerModal({
     state: initial?.state ?? '',
     postal_code: initial?.postal_code ?? '',
     country: initial?.country ?? 'USA',
-    default_fee_percent: initial?.default_fee_percent ?? '',
+    default_payout_percent: initial?.default_payout_percent ?? '',
     payment_method: initial?.payment_method ?? '',
     payment_details: initial?.payment_details ?? '',
     is_active: initial?.is_active ?? true,
@@ -184,10 +184,10 @@ function ConsignerModal({
     e.preventDefault();
     const payload: EbayConsignerCreate = {
       ...form,
-      default_fee_percent:
-        form.default_fee_percent === '' || form.default_fee_percent == null
+      default_payout_percent:
+        form.default_payout_percent === '' || form.default_payout_percent == null
           ? null
-          : form.default_fee_percent,
+          : form.default_payout_percent,
     };
     if (initial) updateMut.mutate(payload);
     else createMut.mutate(payload);
@@ -275,16 +275,16 @@ function ConsignerModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Default Fee % (commission)">
+            <Field label="Default Consigner Payout %">
               <input
                 type="number"
                 min="0"
                 max="100"
                 step="0.01"
-                value={form.default_fee_percent as string | number}
-                onChange={(e) => set('default_fee_percent', e.target.value)}
+                value={form.default_payout_percent as string | number}
+                onChange={(e) => set('default_payout_percent', e.target.value)}
                 className="w-full border rounded-md px-3 py-2"
-                placeholder="e.g., 20"
+                placeholder="e.g., 80"
               />
             </Field>
             <Field label="Payment Method">

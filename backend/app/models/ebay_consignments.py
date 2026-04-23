@@ -37,8 +37,9 @@ class EbayConsigner(Base):
     postal_code: Mapped[Optional[str]] = mapped_column(String(20))
     country: Mapped[Optional[str]] = mapped_column(String(100), default="USA")
 
-    # Default fee% to pre-fill new agreements (e.g., 20.00 == 20%)
-    default_fee_percent: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2))
+    # Default consigner payout% to pre-fill new agreements (e.g., 80.00 == 80%
+    # of each sale price returned to the consigner before pass-through fees)
+    default_payout_percent: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2))
 
     payment_method: Mapped[Optional[str]] = mapped_column(String(100))
     payment_details: Mapped[Optional[str]] = mapped_column(Text)
@@ -93,7 +94,9 @@ class EbayConsignmentAgreement(Base):
     # draft | sent | signed | active | completed | cancelled
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
 
-    fee_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    # Percent of each item's sale price the consigner receives (before
+    # pass-through eBay/payment/shipping fees).  IDGAS keeps the remainder.
+    payout_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
 
     client_signature_name: Mapped[Optional[str]] = mapped_column(String(200))
     client_signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

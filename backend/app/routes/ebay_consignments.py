@@ -139,7 +139,7 @@ async def create_ebay_agreement(
     agr = await svc.create_agreement(
         consigner_id=data.consigner_id,
         agreement_date=data.agreement_date,
-        fee_percent=data.fee_percent,
+        payout_percent=data.payout_percent,
         items=items,
         notes=data.notes,
     )
@@ -234,7 +234,7 @@ async def list_ebay_items(
         if it.agreement is not None:
             resp.agreement_number = it.agreement.agreement_number
             resp.agreement_status = it.agreement.status
-            resp.fee_percent = it.agreement.fee_percent
+            resp.payout_percent = it.agreement.payout_percent
             if it.agreement.consigner is not None:
                 resp.consigner_id = it.agreement.consigner.id
                 resp.consigner_name = it.agreement.consigner.name

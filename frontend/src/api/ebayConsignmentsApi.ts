@@ -24,7 +24,7 @@ export interface EbayConsigner {
   state: string | null;
   postal_code: string | null;
   country: string | null;
-  default_fee_percent: string | null;
+  default_payout_percent: string | null;
   payment_method: string | null;
   payment_details: string | null;
   is_active: boolean;
@@ -42,7 +42,7 @@ export interface EbayConsignerCreate {
   state?: string | null;
   postal_code?: string | null;
   country?: string | null;
-  default_fee_percent?: string | number | null;
+  default_payout_percent?: string | number | null;
   payment_method?: string | null;
   payment_details?: string | null;
   is_active?: boolean;
@@ -98,7 +98,7 @@ export interface EbayConsignmentItem {
 export interface EbayConsignmentItemWithContext extends EbayConsignmentItem {
   agreement_number: string | null;
   agreement_status: string | null;
-  fee_percent: string | null;
+  payout_percent: string | null;
   consigner_id: string | null;
   consigner_name: string | null;
 }
@@ -141,7 +141,7 @@ export interface EbayConsignmentAgreement {
   consigner_id: string;
   agreement_number: string | null;
   agreement_date: string;
-  fee_percent: string;
+  payout_percent: string;
   status: EbayAgreementStatus;
   client_signature_name: string | null;
   client_signed_at: string | null;
@@ -160,14 +160,14 @@ export interface EbayConsignmentAgreement {
 export interface EbayConsignmentAgreementCreate {
   consigner_id: string;
   agreement_date: string;
-  fee_percent: string | number;
+  payout_percent: string | number;
   items?: EbayConsignmentItemCreate[];
   notes?: string | null;
 }
 
 export interface EbayConsignmentAgreementUpdate {
   agreement_date?: string;
-  fee_percent?: string | number;
+  payout_percent?: string | number;
   status?: EbayAgreementStatus;
   client_signature_name?: string | null;
   client_signed_at?: string | null;

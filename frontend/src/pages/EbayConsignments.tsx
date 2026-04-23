@@ -132,7 +132,7 @@ export default function EbayConsignments() {
               <th className="text-left px-4 py-3">Agreement #</th>
               <th className="text-left px-4 py-3">Client</th>
               <th className="text-left px-4 py-3">Date</th>
-              <th className="text-right px-4 py-3">Fee %</th>
+              <th className="text-right px-4 py-3">Payout %</th>
               <th className="text-right px-4 py-3">Items</th>
               <th className="text-center px-4 py-3">Status</th>
               <th className="text-right px-4 py-3"></th>
@@ -165,7 +165,7 @@ export default function EbayConsignments() {
                 </td>
                 <td className="px-4 py-3">{a.consigner_name ?? consignerMap[a.consigner_id] ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-600">{a.agreement_date}</td>
-                <td className="px-4 py-3 text-right">{a.fee_percent}%</td>
+                <td className="px-4 py-3 text-right">{a.payout_percent}%</td>
                 <td className="px-4 py-3 text-right">{a.items?.length ?? 0}</td>
                 <td className="px-4 py-3 text-center">
                   <span className={`px-2 py-0.5 rounded-full text-xs ${STATUS_COLORS[a.status]}`}>
@@ -240,17 +240,17 @@ function CreateAgreementModal({
   const today = new Date().toISOString().slice(0, 10);
   const [consignerId, setConsignerId] = useState('');
   const [agreementDate, setAgreementDate] = useState(today);
-  const [feePercent, setFeePercent] = useState<string>('20');
+  const [payoutPercent, setPayoutPercent] = useState<string>('80');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<ItemRow[]>([
     { _rowId: 1, title: '', description: '', condition: '', minimum_price: '' },
   ]);
 
-  // Pre-fill fee% when consigner picked
+  // Pre-fill payout% when consigner picked
   const onConsignerChange = (id: string) => {
     setConsignerId(id);
     const picked = consigners?.find((c) => c.id === id);
-    if (picked?.default_fee_percent) setFeePercent(String(picked.default_fee_percent));
+    if (picked?.default_payout_percent) setPayoutPercent(String(picked.default_payout_percent));
   };
 
   const addRow = () =>
@@ -279,7 +279,7 @@ function CreateAgreementModal({
   const canSubmit =
     !!consignerId &&
     !!agreementDate &&
-    !!feePercent &&
+    !!payoutPercent &&
     items.every((i) => i.title.trim().length > 0 && String(i.minimum_price).length > 0);
 
   const submit = (e: React.FormEvent) => {
@@ -295,7 +295,7 @@ function CreateAgreementModal({
     createMut.mutate({
       consigner_id: consignerId,
       agreement_date: agreementDate,
-      fee_percent: feePercent,
+      payout_percent: payoutPercent,
       notes: notes || null,
       items: payloadItems,
     });
@@ -346,7 +346,7 @@ function CreateAgreementModal({
 
           <div className="grid grid-cols-3 gap-3">
             <label className="block text-sm">
-              <span className="block text-gray-700 mb-1">IDGAS commission (% of sale)</span>
+              <span className="block text-gray-700 mb-1">Consigner payout (% of sale)</span>
               <div className="relative">
                 <input
                   type="number"
@@ -354,14 +354,17 @@ function CreateAgreementModal({
                   max="100"
                   step="0.01"
                   required
-                  value={feePercent}
-                  onChange={(e) => setFeePercent(e.target.value)}
+                  value={payoutPercent}
+                  onChange={(e) => setPayoutPercent(e.target.value)}
                   className="w-full border rounded-md px-3 py-2 pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                   %
                 </span>
               </div>
+              <span className="block text-xs text-gray-500 mt-1">
+                IDGAS keeps {payoutPercent ? (100 - Number(payoutPercent)).toFixed(2) : '—'}%
+              </span>
             </label>
             <label className="block text-sm col-span-2">
               <span className="block text-gray-700 mb-1">Notes</span>
