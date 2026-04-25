@@ -96,43 +96,73 @@ CREATE TABLE IF NOT EXISTS ebay_consignment_agreements (
     )
 );
 
--- Backwards-compatible rename for installs that ran an earlier version
--- of this migration (which stored an IDGAS commission % under fee_percent).
--- Flip the value so 20% commission becomes 80% consigner payout.
+-- ============================================================
+-- Robust column-presence migration
+-- ============================================================
+-- Handles three possible starting states for already-deployed databases:
+--   (a) old column only        (fee_percent / default_fee_percent)
+--   (b) new column only        (payout_percent / default_payout_percent)
+--   (c) somehow neither (table created from a schema that diverged)
+--
+-- Strategy:
+--   1. Always ADD the new column IF NOT EXISTS (no-op if present).
+--   2. If the OLD column exists, copy its value (flipped: new = 100 - old)
+--      into the new column for any row whose new column is NULL, then DROP
+--      the old column.
+--   3. Default any leftover NULL rows to a sensible value so we can re-impose
+--      NOT NULL on the agreement-level column.
+-- ============================================================
+
+-- ---- ebay_consignment_agreements.payout_percent ----
+ALTER TABLE ebay_consignment_agreements
+    ADD COLUMN IF NOT EXISTS payout_percent NUMERIC(5,2);
+
 DO $$
 BEGIN
-    -- Agreement-level rate
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'ebay_consignment_agreements'
           AND column_name = 'fee_percent'
-    ) AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'ebay_consignment_agreements'
-          AND column_name = 'payout_percent'
     ) THEN
-        ALTER TABLE ebay_consignment_agreements DROP CONSTRAINT IF EXISTS ebay_agreements_fee_check;
-        ALTER TABLE ebay_consignment_agreements RENAME COLUMN fee_percent TO payout_percent;
-        UPDATE ebay_consignment_agreements SET payout_percent = 100 - payout_percent;
-        ALTER TABLE ebay_consignment_agreements
-            ADD CONSTRAINT ebay_agreements_payout_check
-            CHECK (payout_percent >= 0 AND payout_percent <= 100);
+        UPDATE ebay_consignment_agreements
+           SET payout_percent = 100 - fee_percent
+         WHERE payout_percent IS NULL AND fee_percent IS NOT NULL;
+        ALTER TABLE ebay_consignment_agreements DROP COLUMN fee_percent;
     END IF;
+END $$;
 
-    -- Consigner-level default rate
+-- Re-impose NOT NULL + check.  If any rows still NULL (no fee_percent value
+-- was ever set), default them to 80% so the constraint can apply.
+UPDATE ebay_consignment_agreements
+   SET payout_percent = 80 WHERE payout_percent IS NULL;
+
+ALTER TABLE ebay_consignment_agreements
+    ALTER COLUMN payout_percent SET NOT NULL;
+
+ALTER TABLE ebay_consignment_agreements
+    DROP CONSTRAINT IF EXISTS ebay_agreements_fee_check;
+ALTER TABLE ebay_consignment_agreements
+    DROP CONSTRAINT IF EXISTS ebay_agreements_payout_check;
+ALTER TABLE ebay_consignment_agreements
+    ADD CONSTRAINT ebay_agreements_payout_check
+    CHECK (payout_percent >= 0 AND payout_percent <= 100);
+
+
+-- ---- ebay_consigners.default_payout_percent ----
+ALTER TABLE ebay_consigners
+    ADD COLUMN IF NOT EXISTS default_payout_percent NUMERIC(5,2);
+
+DO $$
+BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'ebay_consigners'
           AND column_name = 'default_fee_percent'
-    ) AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'ebay_consigners'
-          AND column_name = 'default_payout_percent'
     ) THEN
-        ALTER TABLE ebay_consigners RENAME COLUMN default_fee_percent TO default_payout_percent;
         UPDATE ebay_consigners
-           SET default_payout_percent = 100 - default_payout_percent
-         WHERE default_payout_percent IS NOT NULL;
+           SET default_payout_percent = 100 - default_fee_percent
+         WHERE default_payout_percent IS NULL AND default_fee_percent IS NOT NULL;
+        ALTER TABLE ebay_consigners DROP COLUMN default_fee_percent;
     END IF;
 END $$;
 

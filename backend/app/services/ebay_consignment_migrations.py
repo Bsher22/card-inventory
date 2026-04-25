@@ -62,6 +62,14 @@ def ensure_ebay_consignment_schema() -> bool:
         logger.error("ebay-consignments: migration file not found at %s", MIGRATION_PATH)
         return False
 
+    # Log starting state so we can diagnose deploy issues
+    starting_missing = _missing_required_columns()
+    print(
+        f"[ebay-consignments] starting migration; missing columns before: "
+        f"{starting_missing or 'none'}",
+        flush=True,
+    )
+
     sql = MIGRATION_PATH.read_text(encoding="utf-8")
     print(f"[ebay-consignments] applying migration from {MIGRATION_PATH}", flush=True)
     try:
@@ -69,19 +77,22 @@ def ensure_ebay_consignment_schema() -> bool:
         # bodies) executes verbatim instead of being split on `;` by SQLAlchemy.
         with sync_engine.begin() as conn:
             conn.exec_driver_sql(sql)
-        # Verify the columns we depend on actually exist now.  If any DO block
-        # silently skipped, this surfaces it loudly in the logs.
-        missing = _missing_required_columns()
-        if missing:
-            print(f"[ebay-consignments] WARN migration ran but columns missing: {missing}",
-                  flush=True)
-            return False
-        print("[ebay-consignments] migration applied successfully", flush=True)
-        return True
     except Exception as exc:
         print(f"[ebay-consignments] ERROR migration failed: {exc}", flush=True)
         logger.exception("ebay-consignments: migration failed: %s", exc)
         return False
+
+    # Verify the columns we depend on actually exist now.  If any DO block
+    # silently skipped, surface it loudly in the logs.
+    missing = _missing_required_columns()
+    if missing:
+        print(
+            f"[ebay-consignments] WARN migration ran but columns still missing: {missing}",
+            flush=True,
+        )
+        return False
+    print("[ebay-consignments] migration applied successfully", flush=True)
+    return True
 
 
 def _missing_required_columns() -> list[str]:
