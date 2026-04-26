@@ -30,7 +30,7 @@ from reportlab.platypus import (
 # Brand config - tweak when ready.  Kept here so we don't scatter
 # company details through the code.
 # ------------------------------------------------------------------
-IDGAS_COMPANY_NAME = "IDGAS LLC"
+IDGAS_COMPANY_NAME = "ID GAS Memorabilia LLC"
 IDGAS_ADDRESS = ""
 IDGAS_EMAIL = ""
 
